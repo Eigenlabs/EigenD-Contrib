@@ -1,0 +1,6 @@
+tmp/
+tools/
+env.sh
+.cproject
+.project
+
