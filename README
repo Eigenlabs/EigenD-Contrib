@@ -10,7 +10,7 @@ unless they give you permission.
 
 Please try and keep master in a compilable state.  Work
 in branches.  Remember that others will be pulling master
-and will be anoyed if it won't compile.
+and will be annoyed if it won't compile.
 
 When you change master, please rebase first to keep the
 timeline nice and clean.  Try and make single coherent
