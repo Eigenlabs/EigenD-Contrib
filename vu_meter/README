@@ -1,0 +1,34 @@
+VU Meter
+========
+
+This is a simple VU meter implementation started at the first Eigenharp DevCon, January 23rd, 2012 by John S. Nolan and Stefan Bohne.
+Simple idea: take an audio signal in and display a VU meter style light bar using the LEDs on the Eigenharp keys.
+
+Inputs
+- audio signal (or and bounded float (-1,1) signal)
+
+Outputs
+- light out (suitable for plumbing into keyboard 'light input' s)
+
+
+Parameters
+- size : the number of keys to be used to display the VU meter
+- thresholds (all in dB)
+  - signal threshold (signal present level/green)
+  - high threshold (signal high level/orange)
+  - clip threshold (signal clip level/red)
+  
+USAGE
+Wire an audio input to the 'audio input'
+Create a dedicated kgroup (use for mapping the display geometry)
+Hook the keyboard 'controller output' to the kgroup 'controller input' (won't work if you miss this)
+In the kgroup edit the parameters and set 'course size' and 'key map' for the display you want (e.g. course size=[[1,0.0]] , key map = [[1,1],[2,2],[3,3],[4,4],[5,5]])
+Hook the 'light output' of the vu_meter to the 'light_input' of the kgroup 'kgroup output' (might need to create one under 'output')
+Hook the 'light output' of the kgroup to the 'light input' of the keybaord
+
+COMMENTARY
+This was a learning exercise to use the recently re-organised 2.0.35-experimental interfaces. May not be the best or most stylistic code to copy!
+
+Using a kgroup for the geometry seems over-blown. Could do with a simple Mapper agent for LEDs that just does display mapping.
+
+
