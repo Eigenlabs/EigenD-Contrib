@@ -32,6 +32,8 @@
 #define OUT_LIGHT 56
 #define OUT_MASK SIG1(OUT_LIGHT)
 
+#define LED_STRUCT_SIZE
+
 namespace
 {
 	struct vu_meter_key_t
@@ -84,6 +86,7 @@ namespace vu_meter
         unsigned long long cfilterctl_inputs() { return IN_MASK; }
         unsigned long long cfilterctl_outputs() { return OUT_MASK; }
         pic::flipflop_t<vu_meter_key_t> key;
+        int size;
     };
 
 	vu_meter_t::vu_meter_t(const piw::cookie_t &output, piw::clockdomain_ctl_t *domain) : impl_(new impl_t(output, domain)) {}
@@ -114,14 +117,19 @@ namespace vu_meter
 		pic::logmsg() << "set clip level to " << v;
 	}
 
+	void vu_meter::vu_meter_t::set_size(int value)
+	{
+		impl_->size = value;
+		pic::logmsg() << "set size to " << value;
+	}
+
 }
 
 bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long long from, unsigned long long to, unsigned long samplerate, unsigned buffersize)
 {
-	unsigned char *dp;
-    unsigned long long t = piw::tsd_time();
+	unsigned long long t = piw::tsd_time();
 
-    piw::data_nb_t light_out = piw::makeblob_nb(t,5,&dp);
+
 
     unsigned signal;
     piw::data_nb_t value;
@@ -139,21 +147,27 @@ bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long 
         }
     }
 
+    int lit_keys = level * impl_->size;
 
-    piw::statusdata_t::int2c(1,dp+0);
-    piw::statusdata_t::int2c(1,dp+2);
-    {
-    	pic::flipflop_t<vu_meter_key_t>::guard_t g(impl_->key);
+	unsigned char *output_string;
+	piw::data_nb_t light_out = piw::makeblob_nb(t,5*lit_keys,&output_string);
+    for (int key = 0; key < lit_keys; ++key) {
+    	unsigned char* dp = output_string + key*5;
+		piw::statusdata_t::int2c(1,dp+0);
+		piw::statusdata_t::int2c(1+key,dp+2);
+		{
+			pic::flipflop_t<vu_meter_key_t>::guard_t g(impl_->key);
 
-        pic::logmsg() << "level " << level << "s "<< g.value().signal_level << "h "<< g.value().high_level << "c "<< g.value().clip_level;
-    	piw::statusdata_t::status2c(false,
-    			(level < g.value().signal_level) ? BCTSTATUS_OFF :
-    			(level < g.value().high_level) ? BCTSTATUS_ACTIVE :
-    			(level < g.value().clip_level) ? BCTSTATUS_UNKNOWN :
-    					BCTSTATUS_SELECTOR_OFF ,dp+4);
+			pic::logmsg() << "level " << level << "s "<< g.value().signal_level << "h "<< g.value().high_level << "c "<< g.value().clip_level;
+			piw::statusdata_t::status2c(false,
+					(level < g.value().signal_level) ? BCTSTATUS_OFF :
+					(level < g.value().high_level) ? BCTSTATUS_ACTIVE :
+					(level < g.value().clip_level) ? BCTSTATUS_UNKNOWN :
+							BCTSTATUS_SELECTOR_OFF ,dp+4);
+		}
+
+		env->cfilterenv_output(OUT_LIGHT, light_out);
     }
-
-    env->cfilterenv_output(OUT_LIGHT, light_out);
 
     return true;
 }

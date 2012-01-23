@@ -35,8 +35,7 @@ namespace vu_meter
             void set_signal_level(float value);
             void set_high_level(float value);
             void set_clip_level(float value);
-            void set_key_row(int value);
-            void set_key_column(int value);
+            void set_size(int value);
 
             class impl_t;
         private:

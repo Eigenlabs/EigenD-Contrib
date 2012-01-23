@@ -11,4 +11,5 @@ class vu_meter[vu_meter::vu_meter_t]
     void set_signal_level(float)
     void set_high_level(float)
     void set_clip_level(float)
+    void set_size(int)
 }
