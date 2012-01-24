@@ -49,6 +49,7 @@ class Agent(agent.Agent):
         self[3][3] = atom.Atom(domain=domain.BoundedFloat(-90,0), init=-1, policy=atom.default_policy(self.__clip_level), names='clip threshold')
         
         self[4] = atom.Atom(domain=domain.BoundedInt(1,100), init=5, policy=atom.default_policy(self.__size), names='size')
+        self[5] = atom.Atom(domain=domain.BoundedFloat(0.0,30), init=5, policy=atom.default_policy(self.__clip_hold), names='clip hold')
         
         self.__send_parameters()
         
@@ -71,13 +72,19 @@ class Agent(agent.Agent):
         self[4].set_value(value)
         self.__send_parameters()
         return True
+        
+    def __clip_hold(self, value):
+        self[5].set_value(value)
+        self.__send_parameters()
+        return True
     
     def __send_parameters(self):
         signal = self[3][1].get_value()
         high = self[3][2].get_value()
         clip = self[3][3].get_value()
         size = self[4].get_value()
-        self.native.set_parameters(signal,high,clip,size)
+        clip_hold = self[5].get_value()
+        self.native.set_parameters(signal,high,clip,size,clip_hold)
 
 
 agent.main(Agent)

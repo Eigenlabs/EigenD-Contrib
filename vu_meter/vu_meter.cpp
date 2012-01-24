@@ -65,6 +65,7 @@ namespace
         vu_meter_func_t(const piw::data_t &path, const vu_meter::vu_meter_t::impl_t* impl)
         {
         	impl_ = impl;
+            clip_hold_stop_time = 0;
         }
 
         bool cfilterfunc_start(piw::cfilterenv_t *env, const piw::data_nb_t &id)
@@ -82,6 +83,7 @@ namespace
         }
 
         piw::data_nb_t id_;
+        unsigned long long clip_hold_stop_time;
     };
 }
 
@@ -95,14 +97,14 @@ namespace vu_meter
         unsigned long long cfilterctl_inputs() { return IN_MASK; }
         unsigned long long cfilterctl_outputs() { return OUT_MASK; }
         pic::flipflop_t<segment_list_t> segments;
-        int size;
+        float clip_hold;
     };
 
 	vu_meter_t::vu_meter_t(const piw::cookie_t &output, piw::clockdomain_ctl_t *domain) : impl_(new impl_t(output, domain)) {}
 	piw::cookie_t vu_meter_t::cookie() { return impl_->cookie(); }
 	vu_meter_t::~vu_meter_t() { delete impl_; }
 
-	void vu_meter::vu_meter_t::set_parameters(float signal,float high,float clip,int number_of_segments) {
+	void vu_meter::vu_meter_t::set_parameters(float signal,float high,float clip,int number_of_segments, float clip_hold) {
 		impl_->segments.alternate().clear();
 		//remember dB's are -ve numbers
 		float db_per_segment = signal/number_of_segments;
@@ -120,6 +122,7 @@ namespace vu_meter
 			impl_->segments.alternate().push_back(segment);
 		}
 		impl_->segments.exchange();
+		impl_->clip_hold = clip_hold * 1e6;
 	}
 }
 
@@ -133,15 +136,10 @@ bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long 
     float level = 0;
     while(env->cfilterenv_next(signal, value, to))
     {
-        switch(signal)
-        {
-            case IN_AUDIO:
-				const float* d = value.as_array();
-            	for (unsigned i=0; i < buffersize; i += 1)
-            		if (level < d[i])
-            			level = d[i];
-            	break;
-        }
+    	const float* d = value.as_array();
+		for (unsigned i=0; i < buffersize; i += 1)
+			if (level < d[i])
+				level = d[i];
     }
 
     //convert to segment display values
@@ -150,12 +148,14 @@ bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long 
 	piw::data_nb_t light_out = piw::makeblob_nb(t,5*segments_g.value().size(),&output_string);
 	for ( segment_list_t::const_iterator segment=segments_g.value().begin() ; segment != segments_g.value().end(); segment++ ) {
     	unsigned char* dp = output_string + (segment->index-1) * 5;
-		piw::statusdata_t::int2c(1,dp+0);
+		piw::statusdata_t::int2c(1,dp);
 		piw::statusdata_t::int2c(segment->index,dp+2);
-		if ( level > segment->clip_level ) {
+		if ( level > segment->clip_level  || ( segment->clip_level != NOT_ON_SEGMENT && clip_hold_stop_time > t ) ) {
 		    piw::statusdata_t::status2c(false, CLIP_REGION ,dp+4);
+		    if (clip_hold_stop_time < t)
+		    	clip_hold_stop_time = t + impl_->clip_hold;
 		}
-		else if ( level > segment->high_level ) {
+		else if ( level > segment->high_level) {
 			piw::statusdata_t::status2c(false, HIGH_REGION ,dp+4);
 		}
 		else if ( level > segment->signal_level ) {

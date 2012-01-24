@@ -32,7 +32,7 @@ namespace vu_meter
             ~vu_meter_t();
             piw::cookie_t cookie();
 
-            void set_parameters(float signal,float high,float clip,int number_of_segments);
+            void set_parameters(float signal,float high,float clip,int number_of_segments, float clip_hold);
 
             class impl_t;
         private:

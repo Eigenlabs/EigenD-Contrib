@@ -8,5 +8,5 @@ class vu_meter[vu_meter::vu_meter_t]
 {
     vu_meter(const cookie &, clockdomain_ctl *)
     cookie cookie()
-    void set_parameters(float,float,float,int)
+    void set_parameters(float,float,float,int,float)
 }

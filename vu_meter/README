@@ -17,6 +17,7 @@ Parameters
   - signal threshold (signal present level/green)
   - high threshold (signal high level/orange)
   - clip threshold (signal clip level/red)
+- clip hold : number of seconds to hold the red light if the signal clips
   
 USAGE
 Wire an audio input to the 'audio input'
