@@ -32,10 +32,7 @@ namespace vu_meter
             ~vu_meter_t();
             piw::cookie_t cookie();
 
-            void set_signal_level(float value);
-            void set_high_level(float value);
-            void set_clip_level(float value);
-            void set_size(int value);
+            void set_parameters(float signal,float high,float clip,int number_of_segments);
 
             class impl_t;
         private:

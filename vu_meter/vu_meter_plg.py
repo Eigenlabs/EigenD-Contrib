@@ -45,34 +45,39 @@ class Agent(agent.Agent):
         
         self[3] = atom.Atom(names='thresholds')
         self[3][1] = atom.Atom(domain=domain.BoundedFloat(-90,0), init=-40.0, policy=atom.default_policy(self.__signal_level), names='signal threshold')
-        self.native.set_signal_level(self[3][1].get_value())
         self[3][2] = atom.Atom(domain=domain.BoundedFloat(-90,0), init=-6.0, policy=atom.default_policy(self.__high_level), names='high threshold')
-        self.native.set_high_level(self[3][2].get_value())
         self[3][3] = atom.Atom(domain=domain.BoundedFloat(-90,0), init=-1, policy=atom.default_policy(self.__clip_level), names='clip threshold')
-        self.native.set_clip_level(self[3][3].get_value())
         
-        self[4] = atom.Atom(domain=domain.BoundedInt(0,100), init=5, policy=atom.default_policy(self.__size), names='size')
-        self.native.set_size(self[4].get_value())
+        self[4] = atom.Atom(domain=domain.BoundedInt(1,100), init=5, policy=atom.default_policy(self.__size), names='size')
+        
+        self.__send_parameters()
         
     def __signal_level(self, value):
         self[3][1].set_value(value)
-        self.native.set_signal_level(value)
+        self.__send_parameters()
         return True
     
     def __high_level(self, value):
         self[3][2].set_value(value)
-        self.native.set_high_level(value)
+        self.__send_parameters()
         return True
     
     def __clip_level(self, value):
         self[3][3].set_value(value)
-        self.native.set_clip_level(value)
+        self.__send_parameters()
         return True
     
     def __size(self, value):
         self[4].set_value(value)
-        self.native.set_size(value)
+        self.__send_parameters()
         return True
+    
+    def __send_parameters(self):
+        signal = self[3][1].get_value()
+        high = self[3][2].get_value()
+        clip = self[3][3].get_value()
+        size = self[4].get_value()
+        self.native.set_parameters(signal,high,clip,size)
 
 
 agent.main(Agent)
