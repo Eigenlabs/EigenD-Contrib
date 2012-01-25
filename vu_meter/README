@@ -27,6 +27,9 @@ In the kgroup edit the parameters and set 'course size' and 'key map' for the di
 Hook the 'light output' of the vu_meter to the 'light_input' of the kgroup 'kgroup output' (might need to create one under 'output')
 Hook the 'light output' of the kgroup to the 'light input' of the keyboard
 
+BUG: currently the kgroup does not remap the status lights properly so you will only get a bar in the first row of the kgroup. You can of
+     course place the kgroup where you like but it will always be a single bar (no fancy layout yet)
+
 DEV COMMENTARY
 This was a learning exercise to use the recently re-organised 2.0.35-experimental interfaces. May not be the best or most stylistic code to copy!
 
