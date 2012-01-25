@@ -38,6 +38,7 @@ namespace vu_meter
         private:
             impl_t *impl_;
     };
+
 };
 
 #endif

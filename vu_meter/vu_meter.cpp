@@ -116,8 +116,8 @@ namespace vu_meter
 			float top = db_per_segment * i;
 			float bottom = db_per_segment * (i+1);
 			segment.signal_level = bottom > high ? NOT_ON_SEGMENT : dBToLinear(bottom);
-			segment.high_level = top < high ? NOT_ON_SEGMENT : bottom > high ? NOT_ON_SEGMENT : dBToLinear(high);
-			segment.clip_level = top < clip ? NOT_ON_SEGMENT : bottom > clip ? NOT_ON_SEGMENT : dBToLinear(clip);
+			segment.high_level = top < high ? NOT_ON_SEGMENT : bottom > high ? dBToLinear(bottom) : dBToLinear(high);
+			segment.clip_level = top < clip ? NOT_ON_SEGMENT : bottom > clip ? dBToLinear(bottom) : dBToLinear(clip);
 			segment.index = number_of_segments - i;
 			impl_->segments.alternate().push_back(segment);
 		}
