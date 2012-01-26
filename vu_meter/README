@@ -2,7 +2,7 @@ VU Meter
 ========
 
 This is a simple VU meter implementation started at the first Eigenharp DevCon, January 23rd, 2012 by John S. Nolan and Stefan Bohne.
-Simple idea: take an audio signal in and display a VU meter style light bar using the LEDs on the Eigenharp keys. Light bar output is logarithmic
+Simple idea: take an audio signal in and display a VU meter style light bar using the LEDs on the Eigenharp keys. Light bar output is logarithmic. Level is RMS.
 
 Inputs
 - audio signal (or and bounded float (-1,1) signal)
@@ -35,10 +35,10 @@ This was a learning exercise to use the recently re-organised 2.0.35-experimenta
 
 Using a kgroup for the geometry seems over-blown. Could do with a simple Mapper agent for LEDs that just does display mapping.
 
-Had to swap to use standard C math for dB conversion as the pic::approx::pow function relies on a limited exp approximation (-1,1 limited)
+Had to swap to use standard C math for dB conversion as the pic::approx::pow function relies on a limited exp approximation (-1,1 limited) [deleted...see later]
 
 Swapped to use a flipflop passing a collection of segment_data_t values. Nicer, cleaner pattern. 
 
-Got rid of laots of set_X methods in Python/Native interface and went to a single set_parameter style
+Got rid of lots of set_X methods in Python/Native interface and went to a single set_parameter style.
 
-
+Swapped to RMS calculation which removed need of log/pow conversions - less computation.

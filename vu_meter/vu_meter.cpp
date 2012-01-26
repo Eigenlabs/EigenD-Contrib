@@ -33,15 +33,11 @@
 #define OUT_LIGHT 56
 #define OUT_MASK SIG1(OUT_LIGHT)
 
-#define LED_STRUCT_SIZE
-
 #define BLANK_REGION BCTSTATUS_OFF
 #define SIGNAL_REGION BCTSTATUS_ACTIVE
 #define HIGH_REGION BCTSTATUS_UNKNOWN
 #define CLIP_REGION BCTSTATUS_SELECTOR_OFF
 
-//have to use math.pow - pic::approx::pow not valid for large values
-#define dBToLinear(x) pow(10.0,x/20.0)
 #define NOT_ON_SEGMENT 100.0 //just a big value
 
 namespace
@@ -109,15 +105,15 @@ namespace vu_meter
 		//remember dB's are -ve numbers
 		float db_per_segment = signal/number_of_segments;
 
-		//calculate display segment boundaries. Convert from dB to linear values so
-		//slow log/exp/pow clacs not done in fast thread
+		//calculate display segment boundaries.
+		//everything in dBs to keep from having to to a square root in RMS calculations
 		for (int i = 0; i < number_of_segments; ++i) {
 			segment_data_t segment;
 			float top = db_per_segment * i;
 			float bottom = db_per_segment * (i+1);
-			segment.signal_level = bottom > high ? NOT_ON_SEGMENT : dBToLinear(bottom);
-			segment.high_level = top < high ? NOT_ON_SEGMENT : bottom > high ? dBToLinear(bottom) : dBToLinear(high);
-			segment.clip_level = top < clip ? NOT_ON_SEGMENT : bottom > clip ? dBToLinear(bottom) : dBToLinear(clip);
+			segment.signal_level = bottom > high ? NOT_ON_SEGMENT : bottom;
+			segment.high_level = top < high ? NOT_ON_SEGMENT : bottom > high ? bottom : high;
+			segment.clip_level = top < clip ? NOT_ON_SEGMENT : bottom > clip ? bottom : clip;
 			segment.index = number_of_segments - i;
 			impl_->segments.alternate().push_back(segment);
 		}
@@ -132,15 +128,19 @@ bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long 
     unsigned signal;
     piw::data_nb_t value;
 
-    //just a simple peak value
-    float level = 0;
+    //RMS calculation
+    double signal_squared = 0;
+    int num_signals = 0;
     while(env->cfilterenv_next(signal, value, to))
     {
+    	num_signals ++;
     	const float* d = value.as_array();
 		for (unsigned i=0; i < buffersize; i += 1)
-			if (level < d[i])
-				level = d[i];
+			signal_squared += d[i]*d[i];
     }
+    //as everything in dBs, no need for sqrt()
+    //...cause log(sqrt(x)) == 0.5 log(x), RMS in dB is 20log(sqrt(x)), so = 10log(x)
+    double level = 10 * log( signal_squared / (buffersize*num_signals) );
 
     //convert to segment display values
     pic::flipflop_t<segment_list_t>::guard_t segments_g(impl_->segments);
