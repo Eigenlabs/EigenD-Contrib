@@ -1,2 +1,2 @@
-TOOLS ?= tools
+TOOLS ?= ../tools
 -include $(TOOLS)/Makefile
