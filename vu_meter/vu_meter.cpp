@@ -139,7 +139,7 @@ bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long 
 			signal_squared += d[i]*d[i];
     }
     //as everything in dBs, no need for sqrt()
-    //...cause log(sqrt(x)) == 0.5 log(x), RMS in dB is 20log(sqrt(x)), so = 10log(x)
+    //...cause log(sqrt(x)) == 0.5 log(x), RMS in dB is 20log(sqrt(x)), so = 10log(sum of x squared)
     double level = 10 * log( signal_squared / (buffersize*num_signals) );
 
     //convert to segment display values
