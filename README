@@ -1,23 +1,6 @@
 This is a Repo for Agents being developed by our users.
 Each agent should be created in its own directory.
 
-Rules
------
+Please see the Wiki page at 
 
-The repo is being shared between all of our contributors,
-so be nice.  Don't mess with other peoples directories
-unless they give you permission.
-
-Please try and keep master in a compilable state.  Work
-in branches.  Remember that others will be pulling master
-and will be annoyed if it won't compile.
-
-When you change master, please rebase first to keep the
-timeline nice and clean.  Try and make single coherent
-changes.  You can use rebase -i to condense lots of 
-'work in progress' changes together.
-
-This will help Eigenlabs pull in your changes.  Eigenlabs
-will be keeping a separate eigenlabs branch to release from.
-If Eigenlabs makes changes, they will do it on that branch,
-not on master.
+    http://www.eigenlabs.com/wiki/EigenD_Contrib/
