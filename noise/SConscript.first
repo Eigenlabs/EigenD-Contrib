@@ -1,0 +1,40 @@
+#
+# Copyright 2012 Eigenlabs Ltd.  http://www.eigenlabs.com
+#
+# This file is part of EigenD.
+#
+# EigenD is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# EigenD is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with EigenD.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+Import('master_env')
+
+master_env.PiExternalRelease('2.0.35-experimental', organisation='EigenDevCon')
+
+plg_files = Split("""
+    synth_noise.cpp
+    OnePole.cpp
+    Filter.cpp
+    Stk.cpp""")
+
+master_env.PiPythonPackage(package='synth_noise', per_agent='plg_synth_noise')
+master_env.PiAgent('noise_oscillator','plg_synth_noise','noise_oscillator_plg',
+    cversion='1.0.0')
+
+master_env.PiPipBinding('synth_noise', 'synth_noise.pip',
+	sources=plg_files, libraries=Split('pic piw pia'), package='synth_noise',
+	per_agent="plg_synth_noise")
+
+master_env.PiPackageDescription('synth_noise', desc='Noise Oscillator', 
+    groups=('contrib',))
+master_env.PiPackageCollection('synth_noise', groups=('contrib',))

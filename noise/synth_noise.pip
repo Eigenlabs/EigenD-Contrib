@@ -1,0 +1,13 @@
+<<<
+#include "synth_noise.h"
+>>>
+
+
+from piw[piw/piw.pip] import clockdomain_ctl,cookie
+
+class noise[synth_noise::noise_t]
+{
+    noise(const cookie &,clockdomain_ctl *)
+    cookie cookie()
+}
+

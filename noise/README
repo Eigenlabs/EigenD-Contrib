@@ -1,0 +1,16 @@
+Noise Oscillator
+================
+    
+This is a simple noise source created at the inaugural Eigenharp Developers'
+conference by Duncan Foster and Robin Fairey.
+
+Inputs
+- volume signal (bounded float (0,1) signal)
+- filter frequency (bounded float (0,20000))
+
+Outputs
+- audio output (bounded float (-1, 1) signal)
+
+ToDo:
+-----
+Verify the shape of the filter.
