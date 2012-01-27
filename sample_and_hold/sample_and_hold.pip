@@ -1,0 +1,13 @@
+<<<
+#include "sample_and_hold.h"
+>>>
+
+
+from piw[piw/piw.pip] import clockdomain_ctl,cookie
+
+class sample_and_hold[sample_and_hold::sample_and_hold_t]
+{
+    sample_and_hold(const cookie &,clockdomain_ctl *)
+    cookie cookie()
+}
+

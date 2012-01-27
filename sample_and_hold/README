@@ -1,0 +1,18 @@
+Sample And Hold Agent
+=====================
+    
+This is a sample and hold agent developed by by Duncan Foster.
+
+Inputs
+- input signal (bounded float (-1,1) signal)
+- gate signal (bounded float (-1,1) signal)
+
+Outputs
+- audio output (bounded float (-1, 1) signal)
+
+The input signal is sampled when the gate signal transitions from negative to 
+positive, and held until the next negative to positive transition.
+
+ToDo:
+-----
+Add a verb for manual sample
