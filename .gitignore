@@ -1,4 +1,7 @@
 *.pyc
 *.pyo
 tmp
-
+tools/.sconsign.dblite
+env.cmd
+env.sh
+tags
