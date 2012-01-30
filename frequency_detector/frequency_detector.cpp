@@ -32,7 +32,7 @@
 #define DEFAULT_THRESHOLD 0.01f
 #define DEFAULT_BUFFER_COUNT 10 
 
-#define FREQUENCY_DETECTOR_DEBUG 0
+#define FREQUENCY_DETECTOR_DEBUG 0 
 
 namespace frequency_detector
 {
@@ -67,6 +67,8 @@ namespace
             last_crossing_sample_ = -1;
 
             env->cfilterenv_reset(IN_AUDIO, id.time());
+
+            env->cfilterenv_output(OUT_FREQUENCY,piw::makefloat_bounded_units_nb(BCTUNIT_HZ,96000,0,0,0,id.time()));
 
             return true;
         }
@@ -121,9 +123,13 @@ namespace
                     pic::logmsg() << "crossings=" << zero_crossings_ << " first=" << first_crossing_sample_ << " last=" << last_crossing_sample_ << " total=" << total_samples << " frequency=" << frequency;
 #endif // FREQUENCY_DETECTOR_DEBUG>0
 
-
                     env->cfilterenv_output(OUT_FREQUENCY,piw::makefloat_bounded_units_nb(BCTUNIT_HZ,96000,0,0,frequency,to));
                 }
+                else
+                {
+                    env->cfilterenv_output(OUT_FREQUENCY,piw::makefloat_bounded_units_nb(BCTUNIT_HZ,96000,0,0,0,to));
+                }
+
                 measured_buffers_ = 0;
                 zero_crossings_ = 0;
                 first_crossing_sample_ = -1;
