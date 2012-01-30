@@ -1,0 +1,14 @@
+<<<
+#include "frequency_detector.h"
+>>>
+
+from piw[piw/piw.pip] import clockdomain_ctl, cookie
+
+class frequency_detector[frequency_detector::frequency_detector_t]
+{
+    frequency_detector(const cookie &, clockdomain_ctl *)
+    cookie cookie()
+
+    void set_threshold(float)
+    void set_buffer_count(unsigned)
+}
