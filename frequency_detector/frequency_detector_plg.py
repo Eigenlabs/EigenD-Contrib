@@ -35,7 +35,7 @@ class Agent(agent.Agent):
 
         self.frequency_detector = frequency_detector_native.frequency_detector(self.output.cookie(), self.domain)
 
-        self.input = bundles.VectorInput(self.frequency_detector.cookie(), self.domain, signals=(1, 2))
+        self.input = bundles.VectorInput(self.frequency_detector.cookie(), self.domain, signals=(1,))
 
         self[2] = atom.Atom(names='inputs')
         self[2][1] = atom.Atom(domain=domain.BoundedFloat(0,1), names="audio input", policy=self.input.vector_policy(1,True))
