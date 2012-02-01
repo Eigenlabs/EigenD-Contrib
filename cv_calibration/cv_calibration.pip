@@ -1,0 +1,12 @@
+<<<
+#include "cv_calibration.h"
+>>>
+
+from piw[piw/piw.pip] import clockdomain_ctl, cookie
+
+class cv_calibration[cv_calibration::cv_calibration_t]
+{
+    cv_calibration(const cookie &, clockdomain_ctl *)
+    cookie cookie()
+    void calibrate()
+}

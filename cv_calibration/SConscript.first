@@ -1,0 +1,36 @@
+#
+# Copyright 2012 Eigenlabs Ltd.  http://www.eigenlabs.com
+#
+# This file is part of EigenD.
+#
+# EigenD is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# EigenD is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with EigenD.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+Import('master_env')
+
+master_env.PiExternalRelease('2.0.35-experimental', organisation='G.Bevin')
+
+plg_files = Split("""
+    cv_calibration.cpp
+""")
+
+master_env.PiPythonPackage(package='cv_calibration', per_agent='plg_cv_calibration')
+master_env.PiAgent('control_voltage_calibration', 'plg_cv_calibration', 'cv_calibration_plg',cversion='1.0.0')
+
+master_env.PiPipBinding('cv_calibration_native', 'cv_calibration.pip',
+	sources=plg_files, libraries=Split('pic piw pia'), package='cv_calibration',
+	per_agent="plg_cv_calibration")
+
+master_env.PiPackageDescription('cv_calibration', desc='Control Voltage Calibration', groups=('contrib',))
+master_env.PiPackageCollection('cv_calibration', groups=('contrib',))

@@ -93,7 +93,7 @@ namespace
                 {
                     // use a rudimentary gate based on a sample's magnitude to start measuring
                     // this prevents very low audio signals to start the detection
-                    if(!zero_crossings_ && fabs(audio_in[i]) < root_->threshold_) continue;
+                    if(!zero_crossings_ && fabsf(audio_in[i]) < root_->threshold_) continue;
 
                     int sgn = sign(audio_in[i]);
                     if(previous_sign_ != sgn)
@@ -179,7 +179,7 @@ static int __set_buffer_count(void *i_, void *v_)
 
 void frequency_detector::frequency_detector_t::set_threshold(float v)
 {
-    v = fabs(v);
+    v = fabsf(v);
     piw::tsd_fastcall(__set_threshold,impl_,&v);
 }
 
