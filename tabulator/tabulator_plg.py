@@ -84,6 +84,46 @@ class Agent(agent.Agent):
         self.__sessionhtmlfile.write('\n')
         self.__sessionhtmlfile.flush()
 
+    def __render_html(self):
+        # initialize the render of each course with a dash
+        tmprender = [ "" for i in range(self.__courselen) ]
+
+        # go over the course queues and render each key
+        maxwidth = 0
+        for i in range(len(self.__coursesqueue)):
+            queue = self.__coursesqueue[i]
+            queue.sort()
+            for q in queue:
+                if len(tmprender[i]) > 0:
+                    tmprender[i] = tmprender[i]+'|'
+                tmprender[i] = tmprender[i]+str(q)
+            maxwidth = max(maxwidth,len(tmprender[i]))
+
+        self.__clear_coursesqueue()
+
+        # center each temporary render based on the maxwidth
+        for i in range(len(tmprender)):
+            tmprender[i] = '-'+tmprender[i].center(maxwidth,'-')
+
+        # increase the maxwidth by 1 for the dash prefix
+        maxwidth +=1
+
+        # check if the current staves aren't exceeding the page width
+        # when the max temprender width is added
+        print_render = False
+        for render in self.__coursesrender:
+            if len(render)+maxwidth >= self.__page_width:
+                print_render = True
+                break
+
+        if print_render:
+            self.__print_render()
+            self.__coursesrender = tmprender
+        else:
+            for i in range(len(self.__coursesrender)):
+                self.__coursesrender[i] = self.__coursesrender[i]+tmprender[i]
+
+
     def __key(self,k):
         if self.__is_notating() and k.is_tuple() and 4 == k.as_tuplelen() and self.__courselen:
 
@@ -104,44 +144,7 @@ class Agent(agent.Agent):
 
             # render the formatted HTML tablature
             if self.__lasttime is not None and k.time()-self.__lasttime>self.__chord_timeout:
-
-                # initialize the render of each course with a dash
-                tmprender = [ "" for i in range(self.__courselen) ]
-
-                # go over the course queues and render each key
-                maxwidth = 0
-                for i in range(len(self.__coursesqueue)):
-                    queue = self.__coursesqueue[i]
-                    queue.sort()
-                    for q in queue:
-                        if len(tmprender[i]) > 0:
-                            tmprender[i] = tmprender[i]+'|'
-                        tmprender[i] = tmprender[i]+str(q)
-                    maxwidth = max(maxwidth,len(tmprender[i]))
-
-                self.__clear_coursesqueue()
-
-                # center each temporary render based on the maxwidth
-                for i in range(len(tmprender)):
-                    tmprender[i] = '-'+tmprender[i].center(maxwidth,'-')
-
-                # increase the maxwidth by 1 for the dash prefix
-                maxwidth +=1
-
-                # check if the current staves aren't exceeding the page width
-                # when the max temprender width is added
-                print_render = False
-                for render in self.__coursesrender:
-                    if len(render)+maxwidth >= self.__page_width:
-                        print_render = True
-                        break
-
-                if print_render:
-                    self.__print_render()
-                    self.__coursesrender = tmprender
-                else:
-                    for i in range(len(self.__coursesrender)):
-                        self.__coursesrender[i] = self.__coursesrender[i]+tmprender[i]
+                self.__render_html()
 
             # store the key in the appropriate queue
             self.__coursesqueue[course-1].append(key)
@@ -192,6 +195,7 @@ class Agent(agent.Agent):
     def __stop(self, subj=None):
         if self.__notating:
 
+            self.__render_html()
             self.__print_render()
 
             self.__notating = False 
