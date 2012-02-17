@@ -129,7 +129,7 @@ class PiWindowsEnvironment(generic_tools.PiGenericEnvironment):
         self.Replace(RELEASESTAGEDIR=join('$STAGEDIR','$PI_COLLECTION-$PI_RELEASE'))
         self.Append(CCFLAGS='/EHsc /w34355 /MD /O2 /fp:fast /arch:SSE2 /DWIN32')
         self.Replace(PI_PLATFORMTYPE='windows')
-        self.Append(LINKFLAGS=Split('/MANIFEST /INCREMENTAL:NO'))
+        self.Append(LINKFLAGS=Split('/MANIFEST /INCREMENTAL:NO /LARGEADDRESSAWARE'))
         self.Append(SHLINK=' $LIBMAPPER')
         self.Append(LINK=' $LIBMAPPER')
         self.Append(LIBS=Split('shell32'))
@@ -559,14 +559,16 @@ class PiWindowsEnvironment(generic_tools.PiGenericEnvironment):
 
         run_binary=env.Install(env.subst('$BINRUNDIR'),bld_binary)
         run_pdb=env.Install(env.subst('$BINRUNDIR'),bld_pdb)
-        env.set_subsystem(run_binary,'WINDOWS')
 
         rv.extend(run_binary)
 
         if gui:
             con_binary = env.InstallAs(env.File(join(env.subst('$BINRUNDIR'),'%s_con.exe' % name)),bld_binary)
+            env.set_subsystem(run_binary,'WINDOWS')
             env.set_subsystem(con_binary,'CONSOLE')
             rv.extend(con_binary)
+        else:
+            env.set_subsystem(run_binary,'CONSOLE')
 
         inst_binary = []
 
