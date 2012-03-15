@@ -17,7 +17,7 @@
 # along with EigenD.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from pi import agent,atom,domain,policy,bundles,logic
+from pi import agent,atom,domain,policy,bundles,logic,action
 from . import fixed_lighter_version as version
 
 import piw
@@ -38,12 +38,51 @@ class Agent(agent.Agent):
         self[2] = atom.Atom(domain=domain.String(), init='[]', names='physical light map', policy=atom.default_policy(self.__physical_light_map))
         self[3] = atom.Atom(domain=domain.String(), init='[]', names='musical light map', policy=atom.default_policy(self.__musical_light_map))
 
+        self.add_verb2(1,'clear([],None)', callback=self.__clear)
+        self.add_verb2(2,'clear([],None,role(None,[matches([physical])]))', callback=self.__clear_physical)
+        self.add_verb2(3,'clear([],None,role(None,[matches([musical])]))', callback=self.__clear_musical)
+        self.add_verb2(4,'add([],None,role(None,[coord(physical,[row],[column])]),role(as,[abstract,matches([red])]))', callback=self.__add_physical)
+        self.add_verb2(5,'add([],None,role(None,[coord(physical,[row],[column])]),role(as,[abstract,matches([green])]))', callback=self.__add_physical)
+        self.add_verb2(6,'add([],None,role(None,[coord(physical,[row],[column])]),role(as,[abstract,matches([orange])]))', callback=self.__add_physical)
+        self.add_verb2(7,'add([],None,role(None,[coord(musical,[course],[key])]),role(as,[abstract,matches([red])]))', callback=self.__add_musical)
+        self.add_verb2(8,'add([],None,role(None,[coord(musical,[course],[key])]),role(as,[abstract,matches([green])]))', callback=self.__add_musical)
+        self.add_verb2(9,'add([],None,role(None,[coord(musical,[course],[key])]),role(as,[abstract,matches([orange])]))', callback=self.__add_musical)
+
     def __physical_light_map(self,v):
         self[2].set_value(v)
         self.__update_lights()
 
     def __musical_light_map(self,v):
         self[3].set_value(v)
+        self.__update_lights()
+
+    def __clear(self,subj):
+        self[2].set_value('[]')
+        self[3].set_value('[]')
+        self.__update_lights()
+
+    def __clear_physical(self,subj,v):
+        self[2].set_value('[]')
+        self.__update_lights()
+
+    def __clear_musical(self,subj,v):
+        self[3].set_value('[]')
+        self.__update_lights()
+
+    def __add_physical(self,subject,key,colour):
+        row,col = action.coord_value(key)
+        colour = action.abstract_string(colour)
+        phys = list(logic.parse_clause(self[2].get_value()))
+        phys.append([[row,col],colour])
+        self[2].set_value(logic.render_term(phys))
+        self.__update_lights()
+
+    def __add_musical(self,subject,key,colour):
+        row,col = action.coord_value(key)
+        colour = action.abstract_string(colour)
+        mus = list(logic.parse_clause(self[3].get_value()))
+        mus.append([[row,col],colour])
+        self[3].set_value(logic.render_term(mus))
         self.__update_lights()
 
     def __update_lights(self):
