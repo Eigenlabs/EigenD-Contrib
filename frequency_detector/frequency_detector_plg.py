@@ -50,7 +50,7 @@ class Agent(agent.Agent):
 
     def __buffer_count(self,v):
         self[4].set_value(v)
-        self.native.set_buffer_count(v)
+        self.frequency_detector.set_buffer_count(v)
         return True
 
 
