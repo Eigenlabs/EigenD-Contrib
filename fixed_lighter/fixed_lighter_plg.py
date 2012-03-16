@@ -110,19 +110,19 @@ class Agent(agent.Agent):
         elif colour == 'green' or colour == 'g':
             colour = 1
         elif colour == 'orange' or colour == 'o':
-            colour =3 
+            colour = 3 
         elif colour == 'off':
             colour = 0
         colour = int(colour)
+        if colour < 0 or colour > 3:
+            colour = 0
         return colour
 
     def __add_lights(self,musical,v):
         mapping = logic.parse_clause(v)
         for m in mapping:
             if 2 == len(m) and 2 == len(m[0]):
-                colour = self.__colour_to_int(m[1])
-                if colour >= 0 and colour <= 3:
-                    self.status_buffer.set_status(musical,int(m[0][0]),int(m[0][1]),colour)
+                self.status_buffer.set_status(musical,int(m[0][0]),int(m[0][1]),self.__colour_to_int(m[1]))
 
     def __choose_physical(self,subject,key,colour):
         self.__choose_base(False,action.abstract_string(colour))
