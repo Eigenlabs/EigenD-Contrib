@@ -45,19 +45,21 @@ class Agent(agent.Agent):
         self.add_verb2(1,'clear([],None)', callback=self.__clear)
         self.add_verb2(2,'clear([],None,role(None,[matches([physical])]))', callback=self.__clear_physical)
         self.add_verb2(3,'clear([],None,role(None,[matches([musical])]))', callback=self.__clear_musical)
-        self.add_verb2(4,'add([],None,role(None,[coord(physical,[row],[column])]),role(as,[abstract,matches([red])]))', callback=self.__add_physical)
-        self.add_verb2(5,'add([],None,role(None,[coord(physical,[row],[column])]),role(as,[abstract,matches([green])]))', callback=self.__add_physical)
-        self.add_verb2(6,'add([],None,role(None,[coord(physical,[row],[column])]),role(as,[abstract,matches([orange])]))', callback=self.__add_physical)
-        self.add_verb2(7,'add([],None,role(None,[coord(musical,[course],[key])]),role(as,[abstract,matches([red])]))', callback=self.__add_musical)
-        self.add_verb2(8,'add([],None,role(None,[coord(musical,[course],[key])]),role(as,[abstract,matches([green])]))', callback=self.__add_musical)
-        self.add_verb2(9,'add([],None,role(None,[coord(musical,[course],[key])]),role(as,[abstract,matches([orange])]))', callback=self.__add_musical)
-        self.add_verb2(10,'choose([],None,role(None,[matches([physical])]),role(as,[abstract,matches([red])]))',self.__choose_physical)
-        self.add_verb2(11,'choose([],None,role(None,[matches([physical])]),role(as,[abstract,matches([green])]))',self.__choose_physical)
-        self.add_verb2(12,'choose([],None,role(None,[matches([physical])]),role(as,[abstract,matches([orange])]))',self.__choose_physical)
-        self.add_verb2(13,'choose([],None,role(None,[matches([musical])]),role(as,[abstract,matches([red])]))',self.__choose_musical)
-        self.add_verb2(14,'choose([],None,role(None,[matches([musical])]),role(as,[abstract,matches([green])]))',self.__choose_musical)
-        self.add_verb2(15,'choose([],None,role(None,[matches([musical])]),role(as,[abstract,matches([orange])]))',self.__choose_musical)
-        self.add_verb2(16,'choose([un],None)',self.__unchoose)
+        self.add_verb2(4,'set([],None,role(None,[coord(physical,[row],[column])]),role(to,[abstract,matches([red])]))', callback=self.__set_physical)
+        self.add_verb2(5,'set([],None,role(None,[coord(physical,[row],[column])]),role(to,[abstract,matches([green])]))', callback=self.__set_physical)
+        self.add_verb2(6,'set([],None,role(None,[coord(physical,[row],[column])]),role(to,[abstract,matches([orange])]))', callback=self.__set_physical)
+        self.add_verb2(7,'set([],None,role(None,[coord(musical,[course],[key])]),role(to,[abstract,matches([red])]))', callback=self.__set_musical)
+        self.add_verb2(8,'set([],None,role(None,[coord(musical,[course],[key])]),role(to,[abstract,matches([green])]))', callback=self.__set_musical)
+        self.add_verb2(9,'set([],None,role(None,[coord(musical,[course],[key])]),role(to,[abstract,matches([orange])]))', callback=self.__set_musical)
+        self.add_verb2(10,'set([un],None,role(None,[coord(physical,[row],[column])]))', callback=self.__unset_physical)
+        self.add_verb2(11,'set([un],None,role(None,[coord(musical,[course],[key])]))', callback=self.__unset_musical)
+        self.add_verb2(12,'choose([],None,role(None,[matches([physical])]),role(as,[abstract,matches([red])]))',self.__choose_physical)
+        self.add_verb2(13,'choose([],None,role(None,[matches([physical])]),role(as,[abstract,matches([green])]))',self.__choose_physical)
+        self.add_verb2(14,'choose([],None,role(None,[matches([physical])]),role(as,[abstract,matches([orange])]))',self.__choose_physical)
+        self.add_verb2(15,'choose([],None,role(None,[matches([musical])]),role(as,[abstract,matches([red])]))',self.__choose_musical)
+        self.add_verb2(16,'choose([],None,role(None,[matches([musical])]),role(as,[abstract,matches([green])]))',self.__choose_musical)
+        self.add_verb2(17,'choose([],None,role(None,[matches([musical])]),role(as,[abstract,matches([orange])]))',self.__choose_musical)
+        self.add_verb2(18,'choose([un],None)',self.__unchoose)
  
     def __physical_light_map(self,v):
         self[2].set_value(v)
@@ -80,19 +82,31 @@ class Agent(agent.Agent):
         self[3].set_value('[]')
         self.__update_lights()
 
-    def __add_physical(self,subject,key,colour):
-        row,col = action.coord_value(key)
+    def __set_physical(self,subject,key,colour):
+        row,column = action.coord_value(key)
         colour = action.abstract_string(colour)
-        phys = list(logic.parse_clause(self[2].get_value()))
-        phys.append([[row,col],colour])
+        phys = [x for x in logic.parse_clause(self[2].get_value()) if x[0][0] != row and x[0][1] != column]
+        phys.append([[row,column],colour])
         self[2].set_value(logic.render_term(phys))
         self.__update_lights()
 
-    def __add_musical(self,subject,key,colour):
-        row,col = action.coord_value(key)
+    def __set_musical(self,subject,key,colour):
+        course,key = action.coord_value(key)
         colour = action.abstract_string(colour)
-        mus = list(logic.parse_clause(self[3].get_value()))
-        mus.append([[row,col],colour])
+        mus = [x for x in logic.parse_clause(self[3].get_value()) if x[0][0] != course and x[0][1] != key]
+        mus.append([[course,key],colour])
+        self[3].set_value(logic.render_term(mus))
+        self.__update_lights()
+
+    def __unset_physical(self,subject,key):
+        row,col = action.coord_value(key)
+        phys = [x for x in logic.parse_clause(self[2].get_value()) if x[0][0] != row and x[0][1] != column]
+        self[2].set_value(logic.render_term(phys))
+        self.__update_lights()
+
+    def __unset_musical(self,subject,key):
+        course,key = action.coord_value(key)
+        mus = [x for x in logic.parse_clause(self[3].get_value()) if x[0][0] != course and x[0][1] != key]
         self[3].set_value(logic.render_term(mus))
         self.__update_lights()
 
