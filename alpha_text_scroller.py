@@ -458,16 +458,16 @@ class DisplayOptions:
 
     __slots__ = ('host','port','colour','speed','repeat','spacing','flip','direction','type')
 
-    def __init_(self):
-        self.host = 'localhost'
-        self.port = 0
-        self.colour = 'R'
-        self.speed = 1
-        self.repeat = 1
-        self.spacing = 2
-        self.flip = False
-        self.direction = 'left'
-        self.type = 'physical'
+    def __init__(self, port, host='localhost', colour='R', speed=1, repeat=1, spacing=1, flip=False, direction='left', type='physical'):
+        self.host = host
+        self.port = port
+        self.colour = colour
+        self.speed = speed
+        self.repeat = repeat
+        self.spacing = spacing
+        self.flip = flip
+        self.direction = direction
+        self.type = type
 
 def create_bitmap(text, o):
     """Create a bitmap out of ASCII text.
@@ -541,7 +541,7 @@ def scroll(text, o):
     text -- the text that will be converted
     o    -- an instance of DisplayOptions to configure the bitmap conversion
     """
-    connection =  httplib.HTTPConnection(o.host+':'+str(o.port))
+    connection = httplib.HTTPConnection(o.host+':'+str(o.port))
 
     content = create_bitmap(text, o)
     
@@ -622,9 +622,8 @@ The following escape codes are understood:
 
     args = parser.parse_args()
 
-    options = DisplayOptions()
+    options = DisplayOptions(args.port)
     options.host = args.host
-    options.port = args.port
     options.colour = args.colour[:1].upper()
     options.speed = args.speed
     options.repeat = args.repeat
