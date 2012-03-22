@@ -17,7 +17,7 @@
 # along with EigenD.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from pi import agent,atom,domain,policy,bundles,resource,utils
+from pi import agent,atom,const,domain,policy,bundles,resource,utils
 from . import tabulator_version as version
 
 import piw
@@ -29,8 +29,13 @@ DEFAULT_PAGE_WIDTH = 80
 class Agent(agent.Agent):
     def __init__(self, address, ordinal):
         agent.Agent.__init__(self, signature=version, names='tabulator', ordinal=ordinal)
-
+        
         self.domain = piw.clockdomain_ctl()
+
+        self[5] = bundles.Output(1, False, names='status output')
+        self.status_output = bundles.Splitter(self.domain, self[5])
+        self.lights = piw.lightsource(piw.change_nb(), 0, self.status_output.cookie())
+        self.lights.set_size(1)        
 
         self.cfunctor = piw.functor_backend(1, False)
         self.cinput = bundles.VectorInput(self.cfunctor.cookie(), self.domain, signals=(1,))
@@ -45,8 +50,9 @@ class Agent(agent.Agent):
         self[3] = atom.Atom(domain=domain.BoundedInt(1,100), init=DEFAULT_CHORD_TIMEOUT, policy=atom.default_policy(self.__set_chordtimeout), names='chord timeout')
         self[4] = atom.Atom(domain=domain.BoundedInt(80,200), init=DEFAULT_PAGE_WIDTH, policy=atom.default_policy(self.__set_pagewidth), names='page width')
 
-        self.add_verb2(1,'start([],None)',self.__start)
-        self.add_verb2(2,'stop([],None)',self.__stop)
+        self.add_verb2(1,'start([],None)',self.__start,status_action=self.__status)
+        self.add_verb2(2,'stop([],None)',self.__stop,status_action=self.__status)
+        self.add_verb2(3,'start([toggle],None)',self.__toggle,status_action=self.__status)
 
         self.__set_chordtimeout(DEFAULT_CHORD_TIMEOUT)
         self.__set_pagewidth(DEFAULT_PAGE_WIDTH)
@@ -56,6 +62,8 @@ class Agent(agent.Agent):
         self.__coursesqueue = None
         self.__coursesrender = None
         self.__lasttime = None
+        
+        self.__update_status()
 
     def __set_chordtimeout(self,v):
         self[3].set_value(v)
@@ -191,6 +199,8 @@ class Agent(agent.Agent):
         self.__notating = True
         self.__clear_coursesqueue()
         self.__clear_coursesrender()
+            
+        self.__update_status()
 
     def __stop(self, subj=None):
         if self.__notating:
@@ -214,7 +224,21 @@ class Agent(agent.Agent):
             self.__sessionhtmlfile.write('</body>\n')
             self.__sessionhtmlfile.write('</html>\n')
             self.__sessionhtmlfile.close()
+            
+            self.__update_status()
 
+    def __toggle(self, subj=None):
+        if self.__notating:
+            self.__stop()
+        else:
+            self.__start()
+
+    def __status(self,subj):
+        return 'dsc(~(s)"#5",None)'
+    
+    def __update_status(self):
+        self.lights.set_status(1, const.status_active if self.__notating else const.status_inactive)
+        
     def close_server(self):
         agent.Agent.close_server(self)
         self.__stop()
