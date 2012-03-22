@@ -125,7 +125,7 @@ class Agent(agent.Agent):
 
 
     def __key(self,k):
-        if self.__is_notating() and k.is_tuple() and 4 == k.as_tuplelen() and self.__courselen:
+        if self.__is_notating() and k.is_tuple() and 5 == k.as_tuplelen() and self.__courselen and k.as_tuple_value(4).as_long():
 
             # extract the key data elements
             physical = k.as_tuple_value(1)
@@ -138,8 +138,8 @@ class Agent(agent.Agent):
 
             # output the raw XML data
             self.__sessionrawfile.write('<key time="'+str(k.time())+'" ')
-            self.__sessionrawfile.write('physicalseq="'+str(k.as_tuple_value(0).as_long())+'" row="'+str(row)+'" column="'+str(column)+'" ')
-            self.__sessionrawfile.write('musicalseq="'+str(k.as_tuple_value(2).as_long())+'" course="'+str(course)+'" key="'+str(key)+'"/>\n')
+            self.__sessionrawfile.write('row="'+str(row)+'" column="'+str(column)+'" ')
+            self.__sessionrawfile.write('course="'+str(course)+'" key="'+str(key)+'"/>\n')
             self.__sessionrawfile.flush()
 
             # render the formatted HTML tablature
