@@ -19,5 +19,5 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.44-experimental', organisation='Eigenlabs Contrib')
+master_env.PiExternalRelease('2.0.46-experimental', organisation='Eigenlabs Contrib')
 master_env.PiPackageCollection('EigenD-Contrib', groups=('contrib',))
