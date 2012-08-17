@@ -49,6 +49,7 @@ class Agent(agent.Agent):
 
         self[3] = atom.Atom(domain=domain.BoundedInt(1,100), init=DEFAULT_CHORD_TIMEOUT, policy=atom.default_policy(self.__set_chordtimeout), names='chord timeout')
         self[4] = atom.Atom(domain=domain.BoundedInt(80,200), init=DEFAULT_PAGE_WIDTH, policy=atom.default_policy(self.__set_pagewidth), names='page width')
+        self[6] = atom.Atom(domain=domain.Bool(), init=False, names='start', policy=atom.default_policy(self.__change_start))
 
         self.add_verb2(1,'start([],None)',self.__start,status_action=self.__status)
         self.add_verb2(2,'stop([],None)',self.__stop,status_action=self.__status)
@@ -57,7 +58,6 @@ class Agent(agent.Agent):
         self.__set_chordtimeout(DEFAULT_CHORD_TIMEOUT)
         self.__set_pagewidth(DEFAULT_PAGE_WIDTH)
 
-        self.__notating = False
         self.__courselen = None
         self.__coursesqueue = None
         self.__coursesrender = None
@@ -133,20 +133,20 @@ class Agent(agent.Agent):
 
 
     def __key(self,k):
-        if self.__is_notating() and k.is_tuple() and 5 == k.as_tuplelen() and self.__courselen and k.as_tuple_value(4).as_long():
+        if self.__is_notating() and k.is_tuple() and 3 == k.as_tuplelen() and self.__courselen and k.as_tuple_value(2).as_long():
 
             # extract the key data elements
-            physical = k.as_tuple_value(1)
-            musical = k.as_tuple_value(3)
+            physical = k.as_tuple_value(0)
+            musical = k.as_tuple_value(1)
 
-            row = int(physical.as_tuple_value(0).as_float())
-            column = int(physical.as_tuple_value(1).as_float())
+            column = int(physical.as_tuple_value(0).as_float())
+            row = int(physical.as_tuple_value(1).as_float())
             course = int(musical.as_tuple_value(0).as_float())
             key = int(musical.as_tuple_value(1).as_float())
 
             # output the raw XML data
             self.__sessionrawfile.write('<key time="'+str(k.time())+'" ')
-            self.__sessionrawfile.write('row="'+str(row)+'" column="'+str(column)+'" ')
+            self.__sessionrawfile.write('column="'+str(column)+'" row="'+str(row)+'" ')
             self.__sessionrawfile.write('course="'+str(course)+'" key="'+str(key)+'"/>\n')
             self.__sessionrawfile.flush()
 
@@ -161,13 +161,19 @@ class Agent(agent.Agent):
         return True
 
     def __is_notating(self):
-        return self.__notating
+        return self[6].get_value()
+
+    def __change_start(self,v):
+        if v:
+            self.__start()
+        else:
+            self.__stop()
 
     def __start(self, subj=None):
         if not self.__courselen:
             return
 
-        if self.__notating:
+        if self.__is_notating():
             self.__stop()
 
         current_time = datetime.datetime.now().strftime("_%Y%m%d-%H%M%S")
@@ -196,19 +202,19 @@ class Agent(agent.Agent):
         self.__sessionhtmlfile.write('<pre>\n')
         self.__sessionhtmlfile.flush()
 
-        self.__notating = True
+        self[6].set_value(True)
         self.__clear_coursesqueue()
         self.__clear_coursesrender()
             
         self.__update_status()
 
     def __stop(self, subj=None):
-        if self.__notating:
+        if self.__is_notating():
 
             self.__render_html()
             self.__print_render()
 
-            self.__notating = False 
+            self[6].set_value(False)
             self.__coursesqueue = None
             self.__lasttime = None
 
@@ -228,7 +234,7 @@ class Agent(agent.Agent):
             self.__update_status()
 
     def __toggle(self, subj=None):
-        if self.__notating:
+        if self.__is_notating():
             self.__stop()
         else:
             self.__start()
@@ -237,7 +243,7 @@ class Agent(agent.Agent):
         return 'dsc(~(s)"#5",None)'
     
     def __update_status(self):
-        self.lights.set_status(1, const.status_active if self.__notating else const.status_inactive)
+        self.lights.set_status(1, const.status_active if self.__is_notating() else const.status_inactive)
         
     def close_server(self):
         agent.Agent.close_server(self)
