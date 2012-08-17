@@ -146,24 +146,23 @@ bool vu_meter_func_t::cfilterfunc_process(piw::cfilterenv_t *env, unsigned long 
     pic::flipflop_t<segment_list_t>::guard_t segments_g(impl_->segments);
 	unsigned char *output_string;
 	piw::data_nb_t light_out = piw::makeblob_nb(t,5*segments_g.value().size(),&output_string);
+
 	for ( segment_list_t::const_iterator segment=segments_g.value().begin() ; segment != segments_g.value().end(); segment++ ) {
     	unsigned char* dp = output_string + (segment->index-1) * 5;
-		piw::statusdata_t::int2c(1,dp);
-		piw::statusdata_t::int2c(segment->index,dp+2);
+    	
+    	unsigned char status = BLANK_REGION;
 		if ( level > segment->clip_level  || ( segment->clip_level != NOT_ON_SEGMENT && clip_hold_stop_time > t ) ) {
-		    piw::statusdata_t::status2c(false, CLIP_REGION ,dp+4);
+			status = CLIP_REGION;
 		    if (clip_hold_stop_time < t)
 		    	clip_hold_stop_time = t + impl_->clip_hold;
 		}
 		else if ( level > segment->high_level) {
-			piw::statusdata_t::status2c(false, HIGH_REGION ,dp+4);
+			status = HIGH_REGION;
 		}
 		else if ( level > segment->signal_level ) {
-			piw::statusdata_t::status2c(false, SIGNAL_REGION ,dp+4);
+			status = SIGNAL_REGION;
 		}
-		else {
-			piw::statusdata_t::status2c(false, BLANK_REGION ,dp+4);
-		}
+        piw::statusdata_t(false,piw::coordinate_t(1,segment->index),status).to_bytes(dp);
 	}
 
 	env->cfilterenv_output(OUT_LIGHT, light_out);
