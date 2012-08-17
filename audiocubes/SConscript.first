@@ -1,0 +1,43 @@
+#
+# Copyright 2012 Eigenlabs Ltd.  http://www.eigenlabs.com
+#
+# This file is part of EigenD.
+#
+# EigenD is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# EigenD is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with EigenD.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+Import('master_env')
+
+master_env.PiExternalRelease('2.0.60-testing', organisation='G.Bevin')
+
+plg_files = Split("""
+    audiocubes.cpp
+""")
+
+master_env.PiPythonPackage(package='audiocubes', per_agent='plg_audiocubes')
+master_env.PiAgent('audiocubes', 'plg_audiocubes', 'audiocubes_plg', cversion='1.0.0')
+
+if master_env['IS_MACOSX']:
+	master_env.Append(PI_MODLINKFLAGS=Split('-LlibCube2/bin/osx -framework CoreFoundation -framework IOKit'))
+
+if master_env['IS_WINDOWS']:
+    master_env.Append(PI_MODLINKFLAGS=Split('/LIBPATH:libCube2\bin\win'))
+
+
+master_env.PiPipBinding('audiocubes_native', 'audiocubes.pip',
+	sources=plg_files, libraries=Split('pic piw pia cube2'), package='audiocubes',
+	per_agent="plg_audiocubes")
+
+master_env.PiPackageDescription('audiocubes', desc='AudioCubes', groups=('contrib',))
+master_env.PiPackageCollection('audiocubes', groups=('contrib',))

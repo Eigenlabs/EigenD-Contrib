@@ -1,0 +1,10 @@
+<<<
+#include "audiocubes.h"
+>>>
+
+from piw[piw/piw.pip] import clockdomain_ctl, cookie
+
+class audiocubes[audiocubes::audiocubes_t]
+{
+    audiocubes(const cookie &, clockdomain_ctl *)
+}

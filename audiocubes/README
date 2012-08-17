@@ -1,0 +1,5 @@
+For this agent to compile, you need to download libCube2 from the Percussa
+website: http://land.percussa.com/downloads/
+
+Unzip the archive and ensure that the files are all in a libCube2 directory in
+this directory. At this point you should be able to compile the agent.
