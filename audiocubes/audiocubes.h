@@ -28,8 +28,11 @@ namespace audiocubes
     class audiocubes_t
     {
         public:
-            audiocubes_t(const piw::cookie_t &output, piw::clockdomain_ctl_t *domain);
+            audiocubes_t(piw::clockdomain_ctl_t *domain);
             ~audiocubes_t();
+
+            void create_audiocube(unsigned index, const piw::cookie_t &output);
+            void set_color(unsigned index, unsigned red, unsigned green, unsigned blue);
 
             class impl_t;
         private:
