@@ -28,7 +28,7 @@ namespace audiocubes
     class audiocubes_t
     {
         public:
-            audiocubes_t(piw::clockdomain_ctl_t *domain);
+            audiocubes_t(piw::clockdomain_ctl_t *domain, const piw::cookie_t &output);
             ~audiocubes_t();
 
             piw::cookie_t create_audiocube(unsigned index, const piw::cookie_t &output);

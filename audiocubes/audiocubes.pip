@@ -6,6 +6,6 @@ from piw[piw/piw.pip] import clockdomain_ctl, cookie
 
 class audiocubes[audiocubes::audiocubes_t]
 {
-    audiocubes(clockdomain_ctl *)
+    audiocubes(clockdomain_ctl *, const cookie &)
     cookie create_audiocube(unsigned, const cookie &)
 }

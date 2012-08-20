@@ -49,7 +49,10 @@ class Agent(agent.Agent):
 
         self.domain = piw.clockdomain_ctl()
 
-        self.audiocubes = audiocubes_native.audiocubes(self.domain)
+        self[2] = bundles.Output(1, False, names='topology output')
+        self.__output = bundles.Splitter(self.domain, self[2])
+
+        self.audiocubes = audiocubes_native.audiocubes(self.domain, self.__output.cookie())
 
         self[1] = atom.Atom(names='audiocubes')
         for i in range(1,16):

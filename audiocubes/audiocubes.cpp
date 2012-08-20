@@ -18,6 +18,7 @@
 */
 
 #include <piw/piw_data.h>
+#include <piw/piw_keys.h>
 #include <piw/piw_thing.h>
 #include <piw/piw_cfilter.h>
 #include <picross/pic_stl.h>
@@ -40,7 +41,6 @@ namespace
         ~output_wire_t();
 
         void startup();
-        void shutdown(unsigned long long);
         void add_value(const piw::data_nb_t &);
 
         piw::xevent_data_buffer_t buffer_;
@@ -127,15 +127,18 @@ namespace
     
 };
 
-struct audiocubes::audiocubes_t::impl_t: piw::thing_t
+struct audiocubes::audiocubes_t::impl_t: piw::root_ctl_t, piw::wire_ctl_t, piw::event_data_source_real_t, piw::thing_t
 {
-    impl_t(piw::clockdomain_ctl_t *);
+    impl_t(piw::clockdomain_ctl_t *, const piw::cookie_t &);
     ~impl_t();
     void thing_dequeue_fast(const piw::data_nb_t &);
     piw::cookie_t create_audiocube(unsigned, const piw::cookie_t &);
+    void send_topology_entry(unsigned, unsigned, unsigned, unsigned);
 
     piw::tsd_snapshot_t ctx_;
     piw::clockdomain_ctl_t *domain_;
+    unsigned long long time_;
+    piw::xevent_data_buffer_t buffer_;
     pic::ref_t<audiocube_t> cubes_[CUBES];
 };
 
@@ -160,9 +163,22 @@ namespace
                 break;
 
             case CUBE_EVENT_TOPOLOGY_UPDATE:
+                {
 #if AUDIOCUBES_DEBUG>0
-                pic::logmsg() << "Cubes topology change";
+                    pic::logmsg() << "Cubes topology change";
 #endif
+                    unsigned char topology[CUBE_MAX_TOPOLOGY_TABLE_SIZE];
+                    int n = CubeTopology(topology);
+
+                    unsigned char *dp;
+                    float *vv;
+                    piw::data_nb_t d = root->ctx_.allocate_host(0,1,-1,0,BCTVTYPE_BLOB,n*2,&dp,1,&vv);
+                    memcpy(dp,topology,n*2);
+                    *vv = n;
+
+                    root->enqueue_fast(d,1);
+                }
+
                 break;
 
             case CUBE_EVENT_SENSOR_UPDATE:
@@ -194,7 +210,6 @@ namespace
 #if AUDIOCUBES_DEBUG>0
                     pic::logmsg() << "Cube " << numCube+1 << " added " << param;
 #endif
-
                     unsigned char *dp;
                     float *vv;
                     piw::data_nb_t d = root->ctx_.allocate_host(0,1000000,-1000000,0,BCTVTYPE_INT,sizeof(long),&dp,1,&vv);
@@ -221,7 +236,7 @@ output_wire_t::output_wire_t(unsigned id): piw::event_data_source_real_t(piw::pa
 
 output_wire_t::~output_wire_t()
 {
-    shutdown(piw::tsd_time());
+    source_end(piw::tsd_time());
     piw::wire_ctl_t::disconnect();
     source_shutdown();
 }
@@ -231,11 +246,6 @@ void output_wire_t::startup()
     unsigned long long t = piw::tsd_time();
     buffer_.add_value(id_, piw::makefloat_bounded_nb(1,0,0,0,t));
     source_start(0,piw::pathone_nb(id_,t),buffer_);
-}
-
-void output_wire_t::shutdown(unsigned long long t)
-{
-    source_end(t);
 }
 
 void output_wire_t::add_value(const piw::data_nb_t &d)
@@ -308,15 +318,26 @@ void audiocube_t::set_color_raw(float red, float green, float blue)
  * audiocubes::audiocubes_t::impl_t
  */
 
-audiocubes::audiocubes_t::impl_t::impl_t(piw::clockdomain_ctl_t *domain) : domain_(domain)
+audiocubes::audiocubes_t::impl_t::impl_t(piw::clockdomain_ctl_t *domain, const piw::cookie_t &output) : piw::event_data_source_real_t(piw::pathone(1,0)), domain_(domain), time_(0)
 {
     piw::tsd_thing(this);
+
+    connect(output);
+
+    buffer_ = piw::xevent_data_buffer_t();
+    buffer_.set_signal(1, piw::tsd_dataqueue(PIW_DATAQUEUE_SIZE_NORM));
+
+    connect_wire(this, source());
+
 	CubeSetEventCallback(libraryCallback, this);
 }
 
 audiocubes::audiocubes_t::impl_t::~impl_t()
 {
     CubeRemoveEventCallback(libraryCallback, this);
+
+    piw::wire_ctl_t::disconnect();
+    source_shutdown();
 }
 
 void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &d)
@@ -346,6 +367,49 @@ void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &
             cubes_[cube].ptr()->wires_[face].ptr()->add_value(d.restamp(piw::tsd_time()));
         }
     }
+    // topology update
+    else if(d.is_blob())
+    {
+        int n = d.as_bloblen();
+        if(n>0)
+        {
+            time_ = std::max(time_+1,piw::tsd_time());
+
+            source_start(0,piw::pathone_nb(1,time_),buffer_);
+
+            unsigned char *topology = (unsigned char *)d.as_blob();
+            int offset = 0;
+            while(n>0)
+            {
+                unsigned char b1 = topology[offset];
+                unsigned char b2 = topology[offset+1];
+                unsigned face1 = (b1&0xf)+1;
+                unsigned cube1 = ((b1>>4)&0xf)+1;
+                unsigned face2 = (b2&0xf)+1;
+                unsigned cube2 = ((b2>>4)&0xf)+1;
+
+                if(cube1 < cube2)
+                {
+                    send_topology_entry(cube1, face1, cube2, face2);
+                }
+                else
+                {
+                    send_topology_entry(cube2, face2, cube1, face1);
+                }
+
+                offset+=2;
+                n-=2;
+            }
+
+            source_end(++time_);
+        }
+    }
+}
+
+void audiocubes::audiocubes_t::impl_t::send_topology_entry(unsigned cube1, unsigned face1, unsigned cube2, unsigned face2)
+{
+    piw::data_nb_t key = piw::makekey_physical(cube1*10+face1, cube2*10+face2, piw::KEY_HARD, ++time_);
+    buffer_.add_value(1, key);
 }
 
 piw::cookie_t audiocubes::audiocubes_t::impl_t::create_audiocube(unsigned index, const piw::cookie_t &output)
@@ -364,7 +428,7 @@ piw::cookie_t audiocubes::audiocubes_t::impl_t::create_audiocube(unsigned index,
  * audiocubes::audiocubes_t
  */
 
-audiocubes::audiocubes_t::audiocubes_t(piw::clockdomain_ctl_t *domain) : impl_(new impl_t(domain))
+audiocubes::audiocubes_t::audiocubes_t(piw::clockdomain_ctl_t *domain, const piw::cookie_t &output) : impl_(new impl_t(domain, output))
 {
 }
 
