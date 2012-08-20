@@ -81,10 +81,24 @@ namespace
             env->cfilterenv_reset(1,id.time());
             env->cfilterenv_reset(2,id.time());
             env->cfilterenv_reset(3,id.time());
+
+            process(env, piw::tsd_time());
             return true;
         }
 
         bool cfilterfunc_process(piw::cfilterenv_t *env, unsigned long long from, unsigned long long to, unsigned long samplerate, unsigned buffersize)
+        {
+            process(env, to);
+            return true;
+        }
+
+        bool cfilterfunc_end(piw::cfilterenv_t *env, unsigned long long to)
+        {
+            process(env, to);
+            return false;
+        }
+
+        void process(piw::cfilterenv_t *env, unsigned long long to)
         {
             bool color_changed = false;
 
@@ -113,13 +127,6 @@ namespace
             {
                 cube_->set_color(red, green, blue);
             }
-
-            return true;
-        }
-
-        bool cfilterfunc_end(piw::cfilterenv_t *env, unsigned long long to)
-        {
-            return false;
         }
 
         audiocube_t *cube_;
