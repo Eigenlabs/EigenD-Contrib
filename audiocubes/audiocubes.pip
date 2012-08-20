@@ -7,6 +7,5 @@ from piw[piw/piw.pip] import clockdomain_ctl, cookie
 class audiocubes[audiocubes::audiocubes_t]
 {
     audiocubes(clockdomain_ctl *)
-    void create_audiocube(unsigned, const cookie &)
-    void set_color(unsigned, unsigned, unsigned, unsigned);
+    cookie create_audiocube(unsigned, const cookie &)
 }

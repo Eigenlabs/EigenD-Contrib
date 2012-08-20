@@ -19,6 +19,7 @@
 
 #include <piw/piw_data.h>
 #include <piw/piw_thing.h>
+#include <piw/piw_cfilter.h>
 #include <picross/pic_stl.h>
 
 #include "audiocubes.h"
@@ -46,14 +47,84 @@ namespace
         unsigned id_;
     };
 
-    struct audiocube_t: piw::root_ctl_t, virtual public pic::counted_t
+    struct audiocube_t: piw::root_ctl_t, piw::cfilterctl_t, piw::cfilter_t, virtual public pic::counted_t
     {
-        audiocube_t(audiocubes::audiocubes_t::impl_t *, const piw::cookie_t &);
+        audiocube_t(audiocubes::audiocubes_t::impl_t *, unsigned, piw::clockdomain_ctl_t *, const piw::cookie_t &);
         ~audiocube_t();
 
+        unsigned id() { return id_; }
+        void set_color(float, float, float);
+        void set_color_raw(float, float, float);
+        void refresh_color();
+
+        piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &);
+        unsigned long long cfilterctl_thru() { return 0; }
+        unsigned long long cfilterctl_inputs() { return SIG3(1,2,3); }
+        unsigned long long cfilterctl_outputs() { return 0; }
+
         audiocubes::audiocubes_t::impl_t *root_;
+        unsigned id_;
         pic::ref_t<output_wire_t> wires_[FACES];
+        float last_red_;
+        float last_green_;
+        float last_blue_;
     };
+    
+    struct func_t: piw::cfilterfunc_t
+    {
+        func_t(audiocube_t *cube) : cube_(cube)
+        {
+        }
+
+        bool cfilterfunc_start(piw::cfilterenv_t *env, const piw::data_nb_t &id)
+        {
+            env->cfilterenv_reset(1,id.time());
+            env->cfilterenv_reset(2,id.time());
+            env->cfilterenv_reset(3,id.time());
+            return true;
+        }
+
+        bool cfilterfunc_process(piw::cfilterenv_t *env, unsigned long long from, unsigned long long to, unsigned long samplerate, unsigned buffersize)
+        {
+            bool color_changed = false;
+
+            float red = cube_->last_red_;
+            float green = cube_->last_green_;
+            float blue = cube_->last_blue_;
+
+            piw::data_nb_t d;
+            if(env->cfilterenv_latest(1,d,to))
+            {
+                color_changed = true;
+                red = d.as_renorm(0,1,0);
+            }
+            if(env->cfilterenv_latest(2,d,to))
+            {
+                color_changed = true;
+                green = d.as_renorm(0,1,0);
+            }
+            if(env->cfilterenv_latest(3,d,to))
+            {
+                color_changed = true;
+                blue = d.as_renorm(0,1,0);
+            }
+
+            if(color_changed)
+            {
+                cube_->set_color(red, green, blue);
+            }
+
+            return true;
+        }
+
+        bool cfilterfunc_end(piw::cfilterenv_t *env, unsigned long long to)
+        {
+            return false;
+        }
+
+        audiocube_t *cube_;
+    };
+    
 };
 
 struct audiocubes::audiocubes_t::impl_t: piw::thing_t
@@ -61,10 +132,10 @@ struct audiocubes::audiocubes_t::impl_t: piw::thing_t
     impl_t(piw::clockdomain_ctl_t *);
     ~impl_t();
     void thing_dequeue_fast(const piw::data_nb_t &);
-    void create_audiocube(unsigned, const piw::cookie_t &);
-    void set_color(unsigned, unsigned, unsigned, unsigned);
+    piw::cookie_t create_audiocube(unsigned, const piw::cookie_t &);
 
     piw::tsd_snapshot_t ctx_;
+    piw::clockdomain_ctl_t *domain_;
     pic::ref_t<audiocube_t> cubes_[CUBES];
 };
 
@@ -177,7 +248,9 @@ void output_wire_t::add_value(const piw::data_nb_t &d)
  * audiocube_t
  */
 
-audiocube_t::audiocube_t(audiocubes::audiocubes_t::impl_t *root, const piw::cookie_t &output): root_(root)
+audiocube_t::audiocube_t(audiocubes::audiocubes_t::impl_t *root, unsigned id, piw::clockdomain_ctl_t *domain, const piw::cookie_t &output):
+    cfilter_t(this, piw::cookie_t(0), domain), root_(root), id_(id),
+    last_red_(-1.f), last_green_(-1.f), last_blue_(-1.f)
 {
     connect(output);
 
@@ -193,12 +266,49 @@ audiocube_t::~audiocube_t()
 {
 }
 
+piw::cfilterfunc_t *audiocube_t::cfilterctl_create(const piw::data_t &)
+{
+    return new func_t(this);
+}
+
+void audiocube_t::refresh_color()
+{
+    if(last_red_>=0 && last_green_>=0 && last_blue_>=0)
+    {
+        set_color_raw(last_red_, last_green_, last_blue_);
+    }
+}
+
+void audiocube_t::set_color(float red, float green, float blue)
+{
+    if(red<0.f || red>1.f || green<0.f || green>1.f || blue<0.f || blue>1.f)
+    {
+        return;
+    }
+    if(red==last_red_ && green==last_green_ && blue==last_blue_)
+    {
+        return;
+    }
+
+    last_red_ = red;
+    last_green_ = green;
+    last_blue_ = blue;
+
+    set_color_raw(red, green, blue);
+}
+
+void audiocube_t::set_color_raw(float red, float green, float blue)
+{
+    CubeColor color = {red*255,green*255,blue*255};
+    CubeSetColor(id(), color);
+}
+
 
 /**
  * audiocubes::audiocubes_t::impl_t
  */
 
-audiocubes::audiocubes_t::impl_t::impl_t(piw::clockdomain_ctl_t *)
+audiocubes::audiocubes_t::impl_t::impl_t(piw::clockdomain_ctl_t *domain) : domain_(domain)
 {
     piw::tsd_thing(this);
 	CubeSetEventCallback(libraryCallback, this);
@@ -221,6 +331,7 @@ void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &
             {
                 cubes_[cube].ptr()->wires_[i].ptr()->startup();
             }
+            cubes_[cube].ptr()->refresh_color();
         }
     }
     // sensor update
@@ -237,29 +348,16 @@ void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &
     }
 }
 
-void audiocubes::audiocubes_t::impl_t::create_audiocube(unsigned index, const piw::cookie_t &output)
+piw::cookie_t audiocubes::audiocubes_t::impl_t::create_audiocube(unsigned index, const piw::cookie_t &output)
 {
     if(index < 1 || index > CUBES)
     {
-        return;
+        return piw::cookie_t(0);
     }
 
-    cubes_[index-1] = pic::ref(new audiocube_t(this, output));
-}
-
-void audiocubes::audiocubes_t::impl_t::set_color(unsigned index, unsigned red, unsigned green, unsigned blue)
-{
-    if(index < 1 || index > CUBES)
-    {
-        return;
-    }
-
-    CubeColor color;
-    color.red = red;
-    color.green = green;
-    color.blue = blue;
-
-    CubeSetColor(index-1, color);
+    audiocube_t *instance = new audiocube_t(this, index-1, domain_, output);
+    cubes_[index-1] = pic::ref(instance);
+    return instance->cookie();
 }
 
 /**
@@ -275,12 +373,7 @@ audiocubes::audiocubes_t::~audiocubes_t()
     delete impl_;
 }
 
-void audiocubes::audiocubes_t::create_audiocube(unsigned index, const piw::cookie_t &output)
+piw::cookie_t audiocubes::audiocubes_t::create_audiocube(unsigned index, const piw::cookie_t &output)
 {
-    impl_->create_audiocube(index, output);
-}
-
-void audiocubes::audiocubes_t::set_color(unsigned index, unsigned red, unsigned green, unsigned blue)
-{
-    impl_->set_color(index, red, green, blue);
+    return impl_->create_audiocube(index, output);
 }

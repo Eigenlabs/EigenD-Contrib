@@ -31,8 +31,7 @@ namespace audiocubes
             audiocubes_t(piw::clockdomain_ctl_t *domain);
             ~audiocubes_t();
 
-            void create_audiocube(unsigned index, const piw::cookie_t &output);
-            void set_color(unsigned index, unsigned red, unsigned green, unsigned blue);
+            piw::cookie_t create_audiocube(unsigned index, const piw::cookie_t &output);
 
             class impl_t;
         private:

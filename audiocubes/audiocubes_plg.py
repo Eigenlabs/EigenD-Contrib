@@ -17,7 +17,7 @@
 # along with EigenD.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from pi import agent,atom,domain,policy,bundles,action,collection,async
+from pi import agent,atom,domain,policy,bundles,action,collection,async,utils
 from . import audiocubes_version as version
 
 import piw
@@ -27,35 +27,21 @@ class AudioCube(atom.Atom):
     def __init__(self,agent,index):
         atom.Atom.__init__(self,names='audiocube',ordinal=index,protocols='remove')
 
-        self.agent = agent
-        self.index = index
-
-        self[1] = atom.Atom(domain=domain.BoundedIntOrNull(0,255,0), init=255, names='red', policy=atom.default_policy(self.__red))
-        self[2] = atom.Atom(domain=domain.BoundedIntOrNull(0,255,0), init=255, names='green', policy=atom.default_policy(self.__green))
-        self[3] = atom.Atom(domain=domain.BoundedIntOrNull(0,255,0), init=255, names='blue', policy=atom.default_policy(self.__blue))
-
+        self.__agent = agent
+        self.__index = index
         self[4] = bundles.Output(1, False, names='sensor output 1')
         self[5] = bundles.Output(2, False, names='sensor output 2')
         self[6] = bundles.Output(3, False, names='sensor output 3')
         self[7] = bundles.Output(4, False, names='sensor output 4')
 
-        self.output = bundles.Splitter(agent.domain, self[4], self[5], self[6], self[7])
-        agent.audiocubes.create_audiocube(index,self.output.cookie())
+        self.__output = bundles.Splitter(self.__agent.domain, self[4], self[5], self[6], self[7])
+        self.__inputcookie = self.__agent.audiocubes.create_audiocube(self.__index, self.__output.cookie())
 
-    def __update_cube_colour(self):
-        self.agent.audiocubes.set_color(self.index, self[1].get_value(), self[2].get_value(), self[3].get_value())
+        self.__input = bundles.VectorInput(self.__inputcookie, self.__agent.domain, signals=(1,2,3))
 
-    def __red(self,v):
-        self[1].set_value(v)
-        self.__update_cube_colour()
-
-    def __green(self,v):
-        self[2].set_value(v)
-        self.__update_cube_colour()
-
-    def __blue(self,v):
-        self[3].set_value(v)
-        self.__update_cube_colour()
+        self[1] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='red input', policy=self.__input.local_policy(1,False))
+        self[2] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='green input', policy=self.__input.local_policy(2,False))
+        self[3] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='blue input', policy=self.__input.local_policy(3,False))
 
 class Agent(agent.Agent):
     def __init__(self, address, ordinal):
