@@ -207,6 +207,9 @@ namespace
 
             case CUBE_EVENT_CUBE_ADDED:
                 {
+                    CubeColor color = {255,255,255};
+                    CubeSetColor(numCube, color);
+
 #if AUDIOCUBES_DEBUG>0
                     pic::logmsg() << "Cube " << numCube+1 << " added " << param;
 #endif
