@@ -35,6 +35,35 @@
 
 namespace
 {
+    struct cubeface_t
+    {
+        cubeface_t() : cube_(0), face_(0) {};
+        cubeface_t(unsigned cube, unsigned face) : cube_(cube), face_(face) {};
+        cubeface_t(const cubeface_t &o) : cube_(o.cube_), face_(o.face_) {};
+
+        bool operator==(const cubeface_t &o) const { return cube_ == o.cube_ && face_ == o.face_; };
+        bool operator!=(const cubeface_t &o) const { return cube_ != o.cube_ || face_ != o.face_; };
+        bool operator<(const cubeface_t &o) const
+        {
+            if(cube_ < o.cube_) return true;
+            if(cube_ > o.cube_) return false;
+            if(face_ < o.face_) return true;
+            if(face_ > o.face_) return false;
+            return false;
+        };
+        bool operator>(const cubeface_t &o) const
+        {
+            if(cube_ < o.cube_) return false;
+            if(cube_ > o.cube_) return true;
+            if(face_ < o.face_) return false;
+            if(face_ > o.face_) return true;
+            return false;
+        };
+
+        unsigned cube_;
+        unsigned face_;
+    };
+
     struct output_wire_t: piw::wire_ctl_t, piw::event_data_source_real_t, virtual public pic::counted_t
     {
         output_wire_t(unsigned);
@@ -147,6 +176,7 @@ struct audiocubes::audiocubes_t::impl_t: piw::root_ctl_t, piw::wire_ctl_t, piw::
     unsigned long long time_;
     piw::xevent_data_buffer_t buffer_;
     pic::ref_t<audiocube_t> cubes_[CUBES];
+    pic::lckmap_t<cubeface_t,cubeface_t>::nbtype *topology_;
 };
 
 namespace
@@ -328,7 +358,7 @@ void audiocube_t::set_color_raw(float red, float green, float blue)
  * audiocubes::audiocubes_t::impl_t
  */
 
-audiocubes::audiocubes_t::impl_t::impl_t(piw::clockdomain_ctl_t *domain, const piw::cookie_t &output) : piw::event_data_source_real_t(piw::pathone(1,0)), domain_(domain), time_(0)
+audiocubes::audiocubes_t::impl_t::impl_t(piw::clockdomain_ctl_t *domain, const piw::cookie_t &output) : piw::event_data_source_real_t(piw::pathone(1,0)), domain_(domain), time_(0), topology_(0)
 {
     piw::tsd_thing(this);
 
@@ -348,6 +378,11 @@ audiocubes::audiocubes_t::impl_t::~impl_t()
 
     piw::wire_ctl_t::disconnect();
     source_shutdown();
+    if(topology_)
+    {
+        delete topology_;
+        topology_ = 0;
+    }
 }
 
 void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &d)
@@ -381,44 +416,155 @@ void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &
     else if(d.is_blob())
     {
         int n = d.as_bloblen();
-        if(n>0)
+        time_ = std::max(time_+1,piw::tsd_time());
+
+        std::set<cubeface_t> existing_cubefaces;
+        pic::lckmap_t<cubeface_t,cubeface_t>::nbtype *new_topology = new pic::lckmap_t<cubeface_t,cubeface_t>::nbtype();
+
+        unsigned char *topology = (unsigned char *)d.as_blob();
+        int offset = 0;
+#if AUDIOCUBES_DEBUG>0
+        pic::logmsg() << "---------- topology change ----------";
+#endif
+        while(n>0)
         {
-            time_ = std::max(time_+1,piw::tsd_time());
+            unsigned char b1 = topology[offset];
+            unsigned char b2 = topology[offset+1];
+            unsigned face1 = (b1&0xf)+1;
+            unsigned cube1 = ((b1>>4)&0xf)+1;
+            unsigned face2 = (b2&0xf)+1;
+            unsigned cube2 = ((b2>>4)&0xf)+1;
 
-            source_start(0,piw::pathone_nb(1,time_),buffer_);
-
-            unsigned char *topology = (unsigned char *)d.as_blob();
-            int offset = 0;
-            while(n>0)
+            cubeface_t from;
+            cubeface_t to;
+            if(cube1 < cube2)
             {
-                unsigned char b1 = topology[offset];
-                unsigned char b2 = topology[offset+1];
-                unsigned face1 = (b1&0xf)+1;
-                unsigned cube1 = ((b1>>4)&0xf)+1;
-                unsigned face2 = (b2&0xf)+1;
-                unsigned cube2 = ((b2>>4)&0xf)+1;
+                from = cubeface_t(cube1,face1);
+                to = cubeface_t(cube2,face2);
+            }
+            else
+            {
+                from = cubeface_t(cube2,face2);
+                to = cubeface_t(cube1,face1);
+            }
+#if AUDIOCUBES_DEBUG>0
+            pic::logmsg() << from.cube_ << ":" << from.face_ << " <-> " << to.cube_ << ":" << to.face_;
+#endif
 
-                if(cube1 < cube2)
-                {
-                    send_topology_entry(cube1, face1, cube2, face2);
-                }
-                else
-                {
-                    send_topology_entry(cube2, face2, cube1, face1);
-                }
+            bool exists = false;
+            bool take_from_previous = false;
 
-                offset+=2;
-                n-=2;
+            // keep track of cubefaces that are already in the topology
+            if(!existing_cubefaces.count(from))
+            {
+                existing_cubefaces.insert(from);
+            }
+            // if a cubeface was already present, remove all entries for it since 
+            // this means the topology is in flux, the previous deterministic state
+            // of that cubeface will be taken from the known topology
+            else
+            {
+                exists = true;
+
+                new_topology->erase(from);
+
+                take_from_previous = true;
             }
 
-            source_end(++time_);
+            // similar in-flux book-keeping as above for the other cubeface in the coordinate
+            if(!existing_cubefaces.count(to))
+            {
+                existing_cubefaces.insert(to);
+            }
+            else
+            {
+                exists = true;
+
+                pic::lckmap_t<cubeface_t,cubeface_t>::nbtype::iterator it = new_topology->begin();
+                pic::lckmap_t<cubeface_t,cubeface_t>::nbtype::iterator it2;
+                while(it!=new_topology->end())
+                {
+                    it2 = it;
+                    it++;
+                    if(it2->second == to)
+                    {
+                        new_topology->erase(it2);
+                    }
+                }
+
+                take_from_previous = true;
+            }
+
+            // populate the new topology with either a new entry or one from the previous topology
+            if(!exists)
+            {
+                new_topology->insert(std::make_pair(from, to));
+            }
+            else if(take_from_previous)
+            {
+                pic::lckmap_t<cubeface_t,cubeface_t>::nbtype::iterator it = topology_->find(from);
+                if(it != topology_->end())
+                {
+                    new_topology->insert(std::make_pair(it->first, it->second));
+                }
+            }
+
+            offset+=2;
+            n-=2;
         }
+#if AUDIOCUBES_DEBUG>0
+        pic::logmsg() << "-------------------------------------";
+#endif
+
+        // send out topology key events for each entry that's new compared to the previous topology
+        source_start(0,piw::pathone_nb(1,time_),buffer_);
+
+#if AUDIOCUBES_DEBUG>0
+        pic::logmsg() << "----------- new topology ------------";
+#endif
+        pic::lckmap_t<cubeface_t,cubeface_t>::nbtype::iterator it,it2;
+        for(it=new_topology->begin(); it!=new_topology->end(); it++)
+        {
+#if AUDIOCUBES_DEBUG>0
+            pic::logmsg() << it->first.cube_ << ":" << it->first.face_ << " <-> " << it->second.cube_ << ":" << it->second.face_;
+#endif
+            if(topology_ && !topology_->empty())
+            {
+                it2 = topology_->find(it->first);
+                if(it2 != topology_->end() && it2->second != it->second)
+                {
+                    send_topology_entry(it->first.cube_, it->first.face_, it->second.cube_, it->second.face_);
+                }
+            }
+            else
+            {
+                send_topology_entry(it->first.cube_, it->first.face_, it->second.cube_, it->second.face_);
+            }
+        }
+#if AUDIOCUBES_DEBUG>0
+        pic::logmsg() << "-------------------------------------";
+#endif
+
+        source_end(++time_);
+
+        if(topology_)
+        {
+            delete topology_;
+        }
+        topology_ = new_topology;
     }
 }
 
 void audiocubes::audiocubes_t::impl_t::send_topology_entry(unsigned cube1, unsigned face1, unsigned cube2, unsigned face2)
 {
-    piw::data_nb_t key = piw::makekey_physical(cube1*10+face1, cube2*10+face2, piw::KEY_HARD, ++time_);
+    unsigned x = cube1*10+face1;
+    unsigned y = cube2*10+face2;
+    piw::data_nb_t key = piw::makekey_physical(x, y, piw::KEY_HARD, time_);
+#if AUDIOCUBES_DEBUG>0
+    pic::logmsg() << "=====================================================";
+    pic::logmsg() << "========== TOPOLOGY EVENT " << key << " ==========";
+    pic::logmsg() << "=====================================================";
+#endif
     buffer_.add_value(1, key);
 }
 
