@@ -26,7 +26,7 @@ plg_files = Split("""
 """)
 
 master_env.PiPythonPackage(package='audiocubes', per_agent='plg_audiocubes')
-master_env.PiAgent('audiocubes', 'plg_audiocubes', 'audiocubes_plg', cversion='1.0.0')
+master_env.PiAgent('audiocubes', 'plg_audiocubes', 'audiocubes_plg', cversion='1.0.0', lexicon='lexicon.txt')
 
 if master_env['IS_MACOSX']:
 	master_env.Append(LINKFLAGS=Split('-LlibCube2/bin/osx -lcube2 -framework CoreFoundation -framework IOKit'))

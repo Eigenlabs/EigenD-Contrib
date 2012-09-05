@@ -25,7 +25,7 @@ import audiocubes_native
 
 class AudioCube(atom.Atom):
     def __init__(self,agent,index):
-        atom.Atom.__init__(self,names='audiocube',ordinal=index,protocols='remove')
+        atom.Atom.__init__(self,names='audiocube',ordinal=index)
 
         self.__agent = agent
         self.__index = index
