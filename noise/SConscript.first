@@ -19,7 +19,7 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.64-stable', organisation='EigenDevCon')
+master_env.PiExternalRelease('2.0.64-stable', '2.0-stable', organisation='EigenDevCon')
 
 plg_files = Split("""
     synth_noise.cpp

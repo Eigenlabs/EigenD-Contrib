@@ -19,7 +19,7 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.64-stable', organisation='Eigenlabs Examples')
+master_env.PiExternalRelease('2.0.64-stable', '2.0-stable', organisation='Eigenlabs Examples')
 
 plg_files = Split("""
     vu_meter.cpp

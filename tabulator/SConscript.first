@@ -19,7 +19,7 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.64-stable', organisation='G.Bevin')
+master_env.PiExternalRelease('2.0.64-stable', '2.0-stable', organisation='G.Bevin')
 
 master_env.PiPythonPackage(package='tabulator', per_agent='plg_tabulator')
 master_env.PiAgent('tabulator', 'plg_tabulator', 'tabulator_plg',cversion='1.0.0')
