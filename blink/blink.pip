@@ -1,0 +1,11 @@
+<<<
+#include "blink.h"
+>>>
+
+from piw[piw/piw.pip] import clockdomain_ctl, cookie
+
+class blink[blink::blink_t]
+{
+    blink(clockdomain_ctl *)
+    cookie create_blink(unsigned)
+}
