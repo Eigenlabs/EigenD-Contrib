@@ -22,7 +22,7 @@ Import('master_env')
 master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
 
 plg_files = Split("""
-    blink.cpp blink1-lib.c
+    blink.cpp blink1-lib.cpp
 """)
 
 master_env.PiPythonPackage(package='blink', per_agent='plg_blink')

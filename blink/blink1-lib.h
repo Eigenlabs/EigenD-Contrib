@@ -9,7 +9,7 @@
 #ifndef __BLINK1_LIB_H__
 #define __BLINK1_LIB_H__
 
-#include <stdint.h>
+#include <picross/pic_stdint.h>
 
 #include "hidapi.h"
 #include "usbconfig.h" // from firmware, for VID,PID,vendor name & product name 

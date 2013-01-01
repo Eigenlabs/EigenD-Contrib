@@ -154,7 +154,7 @@ int blink1_write( hid_device* dev, void* buf, int len)
     if( dev==NULL ) {
         return -1; // BLINK1_ERR_NOTOPEN;
     }
-    int rc = hid_send_feature_report( dev, buf, len );
+    int rc = hid_send_feature_report( dev, (unsigned char *)buf, len );
     return rc;
 }
 
@@ -165,9 +165,9 @@ int blink1_read( hid_device* dev, void* buf, int len)
     if( dev==NULL ) {
         return -1; // BLINK1_ERR_NOTOPEN;
     }
-    int rc = hid_send_feature_report(dev, buf, len); // FIXME: check rc
+    int rc = hid_send_feature_report(dev, (unsigned char *)buf, len); // FIXME: check rc
 
-    if( (rc = hid_get_feature_report(dev, buf, len) == -1) ) {
+    if( (rc = hid_get_feature_report(dev, (unsigned char *)buf, len) == -1) ) {
       LOG("error reading data: %s\n",blink1_error_msg(rc));
     }
     return rc;
@@ -179,7 +179,6 @@ int blink1_read( hid_device* dev, void* buf, int len)
 // except for a "hid_device*"
 // -------------------------------------------------------------------------
 
-#include <unistd.h>
 
 //
 int blink1_getSerialNumber(hid_device *dev, char* buf)
