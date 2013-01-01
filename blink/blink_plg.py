@@ -34,9 +34,9 @@ class Blink(atom.Atom):
 
         self.__input = bundles.VectorInput(self.__inputcookie, self.__agent.domain, signals=(1,2,3))
 
-        self[1] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='red input', policy=self.__input.local_policy(1,False))
-        self[2] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='green input', policy=self.__input.local_policy(2,False))
-        self[3] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='blue input', policy=self.__input.local_policy(3,False))
+        self[1] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='red', policy=self.__input.local_policy(1,False))
+        self[2] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='green', policy=self.__input.local_policy(2,False))
+        self[3] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='blue', policy=self.__input.local_policy(3,False))
 
 class Agent(agent.Agent):
     def __init__(self, address, ordinal):
