@@ -628,16 +628,54 @@ keypress_input_t::~keypress_input_t()
     root_->unregister_keypress_input(index_);
 }
 
-sysin_events::sysin_events_t::sysin_events_t(piw::clockdomain_ctl_t *domain) : impl_(new impl_t(domain)) {}
-sysin_events::sysin_events_t::~sysin_events_t() { delete impl_; }
-piw::cookie_t sysin_events::sysin_events_t::mouse_input() { return impl_->mouseinput_.cookie(); }
-piw::cookie_t sysin_events::sysin_events_t::create_keypress_input(unsigned index) { return impl_->create_keypress_input(index); }
-void sysin_events::sysin_events_t::remove_keypress_input(unsigned index) { impl_->destroy_keypress_input(index); }
-piw::change_nb_t sysin_events::sysin_events_t::press_key() { return impl_->press_key(); }
-void sysin_events::sysin_events_t::set_mouse_x_scale(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_x_scale,&impl_->mouseinput_,&v); }
-void sysin_events::sysin_events_t::set_mouse_y_scale(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_y_scale,&impl_->mouseinput_,&v); }
-void sysin_events::sysin_events_t::set_mouse_x_deadband(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_x_deadband,&impl_->mouseinput_,&v); }
-void sysin_events::sysin_events_t::set_mouse_y_deadband(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_y_deadband,&impl_->mouseinput_,&v); }
+sysin_events::sysin_events_t::sysin_events_t(piw::clockdomain_ctl_t *domain) : impl_(new impl_t(domain))
+{
+}
+
+sysin_events::sysin_events_t::~sysin_events_t()
+{
+    delete impl_;
+}
+
+piw::cookie_t sysin_events::sysin_events_t::mouse_input()
+{
+    return impl_->mouseinput_.cookie();
+}
+
+piw::cookie_t sysin_events::sysin_events_t::create_keypress_input(unsigned index)
+{
+    return impl_->create_keypress_input(index);
+}
+
+void sysin_events::sysin_events_t::remove_keypress_input(unsigned index)
+{
+    impl_->destroy_keypress_input(index);
+}
+
+piw::change_nb_t sysin_events::sysin_events_t::press_key()
+{
+    return impl_->press_key();
+}
+
+void sysin_events::sysin_events_t::set_mouse_x_scale(float v)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_x_scale,&impl_->mouseinput_,&v);
+}
+
+void sysin_events::sysin_events_t::set_mouse_y_scale(float v)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_y_scale,&impl_->mouseinput_,&v);
+}
+
+void sysin_events::sysin_events_t::set_mouse_x_deadband(float v)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_x_deadband,&impl_->mouseinput_,&v);
+}
+
+void sysin_events::sysin_events_t::set_mouse_y_deadband(float v)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_y_deadband,&impl_->mouseinput_,&v);
+}
 
 void sysin_events::sysin_events_t::set_keypress_code(unsigned index, unsigned code)
 {
