@@ -10,8 +10,8 @@ class sysin_events[sysin_events::sysin_events_t]
     cookie cookie()
 
     change_nb press_key()
-    void set_mouse_x_scale(unsigned)
-    void set_mouse_y_scale(unsigned)
+    void set_mouse_x_scale(float)
+    void set_mouse_y_scale(float)
     void set_mouse_x_deadband(float)
     void set_mouse_y_deadband(float)
 }

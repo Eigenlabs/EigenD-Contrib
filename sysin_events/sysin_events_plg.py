@@ -31,16 +31,18 @@ class Agent(agent.Agent):
 
         self.sysin_events = sysin_events_native.sysin_events(self.domain)
 
-        self.input = bundles.VectorInput(self.sysin_events.cookie(), self.domain, signals=(1,2))
+        self.input = bundles.VectorInput(self.sysin_events.cookie(), self.domain, signals=(1,2,3,4))
 
         self[1] = atom.Atom(names='inputs')
-        self[1][1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse x input", policy=self.input.vector_policy(1,True))
-        self[1][2] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse y input", policy=self.input.vector_policy(2,True))
+        self[1][1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse horizontal input", policy=self.input.vector_policy(1,False))
+        self[1][2] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse vertical input", policy=self.input.vector_policy(2,False))
+        self[1][3] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="left mouse button input", policy=self.input.vector_policy(3,False))
+        self[1][4] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="right mouse button input", policy=self.input.vector_policy(4,False))
 
-        self[4] = atom.Atom(domain=domain.BoundedInt(1,100), init=10, policy=atom.default_policy(self.__set_mouse_x_scale), names='mouse x scale')
-        self[5] = atom.Atom(domain=domain.BoundedInt(1,100), init=10, policy=atom.default_policy(self.__set_mouse_y_scale), names='mouse y scale')
-        self[6] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.3, policy=atom.default_policy(self.__set_mouse_x_deadband), names='mouse x deadband')
-        self[7] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.4, policy=atom.default_policy(self.__set_mouse_y_deadband), names='mouse y deadband')
+        self[4] = atom.Atom(domain=domain.BoundedFloat(-10,10), init=2.0, policy=atom.default_policy(self.__set_mouse_x_scale), names='mouse horizontal scale')
+        self[5] = atom.Atom(domain=domain.BoundedFloat(-10,10), init=-1.0, policy=atom.default_policy(self.__set_mouse_y_scale), names='mouse vertical scale')
+        self[6] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.2, policy=atom.default_policy(self.__set_mouse_x_deadband), names='mouse horizontal deadband')
+        self[7] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.2, policy=atom.default_policy(self.__set_mouse_y_deadband), names='mouse vertical deadband')
 
         self.add_verb2(1,'press([],~a,role(None,[matches([key])]),role(as,[numeric]))',create_action=self.__press_key)
         self.add_verb2(2,'press([],~a,role(None,[matches([character])]),role(as,[abstract]))',create_action=self.__press_character)

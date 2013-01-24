@@ -34,8 +34,8 @@ namespace sysin_events
 
             piw::change_nb_t press_key();
   
-            void set_mouse_x_scale(unsigned v);
-            void set_mouse_y_scale(unsigned v);
+            void set_mouse_x_scale(float v);
+            void set_mouse_y_scale(float v);
             void set_mouse_x_deadband(float v);
             void set_mouse_y_deadband(float v);
   
