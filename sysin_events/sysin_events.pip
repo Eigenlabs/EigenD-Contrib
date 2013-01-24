@@ -22,4 +22,9 @@ class sysin_events[sysin_events::sysin_events_t]
     void set_keypress_character(unsigned, const char *)
     void set_keypress_hold(unsigned, bool)
     void set_keypress_threshold(unsigned, float)
+    void set_keypress_velocity(unsigned, bool)
+
+    void set_velocity_samples(unsigned)
+    void set_velocity_curve(float)
+    void set_velocity_scale(float)
 }

@@ -39,6 +39,7 @@ class KeyPress(atom.Atom):
         self[3] = atom.Atom(domain=domain.String(), names='character', init='', policy=atom.default_policy(self.__character))
         self[4] = atom.Atom(domain=domain.Bool(), names='hold', init=True, policy=atom.default_policy(self.__hold))
         self[5] = atom.Atom(domain=domain.BoundedFloat(-1,1), names='threshold', init=0.0, policy=atom.default_policy(self.__threshold))
+        self[6] = atom.Atom(domain=domain.Bool(), names='velocity', init=False, policy=atom.default_policy(self.__velocity))
 
     def __code(self,v):
         self[2].set_value(v)
@@ -58,6 +59,11 @@ class KeyPress(atom.Atom):
     def __threshold(self,v):
         self[5].set_value(v)
         self.__agent.sysin_events.set_keypress_threshold(self.__index, v);
+        return True
+
+    def __velocity(self,v):
+        self[6].set_value(v)
+        self.__agent.sysin_events.set_keypress_velocity(self.__index, v);
         return True
 
     def disconnect(self):
@@ -143,6 +149,11 @@ class Agent(agent.Agent):
         self[1][4] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="right mouse button input", policy=self.__input.vector_policy(4,False))
 
         self[2] = KeyPresses(self)
+        
+        self[3] = atom.Atom(names='velocity curve controls')
+        self[3][1] = atom.Atom(domain=domain.BoundedInt(1,1000), init=4, names="velocity sample", policy=atom.default_policy(self.__set_samples))
+        self[3][2] = atom.Atom(domain=domain.BoundedFloat(0.1,10), init=4, names="velocity curve", policy=atom.default_policy(self.__set_curve))
+        self[3][3] = atom.Atom(domain=domain.BoundedFloat(0.1,10), init=4, names="velocity scale", policy=atom.default_policy(self.__set_scale))
 
         self[4] = atom.Atom(domain=domain.BoundedFloat(-10,10), init=2.0, policy=atom.default_policy(self.__set_mouse_x_scale), names='mouse horizontal scale')
         self[5] = atom.Atom(domain=domain.BoundedFloat(-10,10), init=-1.0, policy=atom.default_policy(self.__set_mouse_y_scale), names='mouse vertical scale')
@@ -151,6 +162,21 @@ class Agent(agent.Agent):
 
         self.add_verb2(1,'press([],~a,role(None,[matches([ansi,key])]),role(as,[numeric]))',create_action=self.__press_key)
         self.add_verb2(2,'press([],~a,role(None,[matches([character])]),role(as,[abstract]))',create_action=self.__press_character)
+
+    def __set_samples(self,v):
+        self[3][1].set_value(v)
+        self.sysin_events.set_velocity_samples(v)
+        return True
+
+    def __set_curve(self,v):
+        self[3][2].set_value(v)
+        self.sysin_events.set_velocity_curve(v)
+        return True
+
+    def __set_scale(self,v):
+        self[3][3].set_value(v)
+        self.sysin_events.set_velocity_scale(v)
+        return True
 
     def __set_mouse_x_scale(self,v):
         self[4].set_value(v)

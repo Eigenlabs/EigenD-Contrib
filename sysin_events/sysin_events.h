@@ -46,6 +46,11 @@ namespace sysin_events
             void set_keypress_character(unsigned index, const char *chr);
             void set_keypress_hold(unsigned index, bool flag);
             void set_keypress_threshold(unsigned index, float threshold);
+            void set_keypress_velocity(unsigned index, bool flag);
+            
+            void set_velocity_samples(unsigned n);
+            void set_velocity_curve(float n);
+            void set_velocity_scale(float n);
   
             class impl_t;
         private:

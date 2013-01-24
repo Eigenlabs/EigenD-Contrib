@@ -20,6 +20,7 @@
 #include <piw/piw_cfilter.h>
 #include <piw/piw_data.h>
 #include <piw/piw_tsd.h>
+#include <piw/piw_velocitydetect.h>
 
 #include "sysin_events.h"
 
@@ -226,7 +227,7 @@ namespace
     struct keypress_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
         keypress_input_t(sysin_events::sysin_events_t::impl_t *root, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain),
-            root_(root), index_(index), code_(0), char_(UINT16_MAX), hold_(true), threshold_(0.0) {}
+            root_(root), index_(index), hold_(true), threshold_(0.0), velocity_(false), code_(0), char_(UINT16_MAX) {}
         ~keypress_input_t();
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
@@ -255,6 +256,14 @@ namespace
             keypress_input_t *i = (keypress_input_t *)i_;
             bool v = *(bool *)v_;
             i->hold_ = v;
+            return 0;
+        }
+
+        static int __set_velocity(void *i_, void *v_)
+        {
+            keypress_input_t *i = (keypress_input_t *)i_;
+            bool v = *(bool *)v_;
+            i->velocity_ = v;
             return 0;
         }
 
@@ -296,16 +305,21 @@ namespace
         {
             piw::tsd_fastcall(keypress_input_t::__set_threshold,this,&threshold);
         }
+        
+        void set_velocity(bool velocity)
+        {
+            piw::tsd_fastcall(keypress_input_t::__set_velocity,this,&velocity);
+        }
 
+        sysin_events::sysin_events_t::impl_t * const root_;
+        const unsigned index_;
+        bool hold_;
+        float threshold_;
+        bool velocity_;
+        
         private:
-            sysin_events::sysin_events_t::impl_t * const root_;
-            const unsigned index_;
             unsigned code_;
             CGKeyCode char_;
-            
-        public:
-            bool hold_;
-            float threshold_;
     };
 }
 
@@ -402,6 +416,7 @@ namespace sysin_events
         piw::clockdomain_ctl_t * const domain_;
         mouse_input_t mouseinput_;
         pic::flipflop_t<std::map<unsigned,keypress_input_t *> > keypress_inputs_;
+        piw::velocityconfig_t velocity_config_;
     };
 }
 
@@ -543,7 +558,7 @@ namespace
     
     struct keypress_func_t: piw::cfilterfunc_t
     {
-        keypress_func_t(keypress_input_t *root) : root_(root), held_(false), down_(false), down_code_(0)
+        keypress_func_t(keypress_input_t *root) : root_(root), held_(false), down_(false), down_code_(0), detector_(root_->root_->velocity_config_)
         {
         }
 
@@ -553,6 +568,7 @@ namespace
             
             env->cfilterenv_reset(IN_KEY_PRESSURE, id.time());
             down_ = false;
+            detector_.init();
             
             return true;
         }
@@ -572,7 +588,16 @@ namespace
                 {
                     case IN_KEY_PRESSURE:
                         {
-                            float v = d.as_norm();
+                            double v = d.as_norm();
+                            if(!detector_.is_started())
+                            {
+                                double velocity;
+                                if(detector_.detect(d, &velocity) && root_->velocity_)
+                                {
+                                    v = velocity;
+                                }
+                            }
+
                             if(!down_)
                             {
                                 if(exceeds_threshold(v))
@@ -617,10 +642,10 @@ namespace
         
         bool exceeds_threshold(float v)
         {
-            int sign_v = sign(v);
-            int sign_t = sign(root_->threshold_);
             if(root_->threshold_ != 0.f)
             {
+                int sign_v = sign(v);
+                int sign_t = sign(root_->threshold_);
                 if((sign_v != sign_t) ||
                    (sign_v < 0 && sign_t < 0 && v > root_->threshold_) ||
                    (sign_v > 0 && sign_t > 0 && v < root_->threshold_))
@@ -649,6 +674,7 @@ namespace
         bool held_;
         bool down_;
         unsigned down_code_;
+        piw::velocitydetector_t detector_;
     };
 }
 
@@ -750,4 +776,28 @@ void sysin_events::sysin_events_t::set_keypress_threshold(unsigned index, float 
     {
         i->set_threshold(threshold);
     }
+}
+
+void sysin_events::sysin_events_t::set_keypress_velocity(unsigned index, bool flag)
+{
+    keypress_input_t *i = impl_->get_keypress_input(index);
+    if(i)
+    {
+        i->set_velocity(flag);
+    }
+}
+
+void sysin_events::sysin_events_t::set_velocity_samples(unsigned n)
+{
+    impl_->velocity_config_.set_samples(n);
+}
+
+void sysin_events::sysin_events_t::set_velocity_curve(float n)
+{
+    impl_->velocity_config_.set_curve(n);
+}
+
+void sysin_events::sysin_events_t::set_velocity_scale(float n)
+{
+    impl_->velocity_config_.set_scale(n);
 }
