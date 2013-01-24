@@ -47,6 +47,7 @@ class KeyPress(atom.Atom):
 
     def __character(self,v):
         self[3].set_value(v)
+        self.__agent.sysin_events.set_keypress_character(self.__index, v);
         return True
 
     def __hold(self,v):

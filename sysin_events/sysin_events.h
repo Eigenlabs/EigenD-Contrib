@@ -43,6 +43,7 @@ namespace sysin_events
             void set_mouse_y_deadband(float v);
             
             void set_keypress_code(unsigned index, unsigned code);
+            void set_keypress_character(unsigned index, const char *chr);
             void set_keypress_hold(unsigned index, bool flag);
             void set_keypress_threshold(unsigned index, float threshold);
   

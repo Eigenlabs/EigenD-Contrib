@@ -135,14 +135,26 @@ namespace
 
         return 0;
     }
+    
+    CGKeyCode make_keycode(const char *k)
+    {
+        if(0 == *k)
+        {
+            return UINT16_MAX;
+        }
+        
+        NSString *str = [[NSString alloc] initWithUTF8String:k];
+        UniChar chr = [str characterAtIndex:0];
+        CGKeyCode c = keyCodeForChar(chr);
+        CFRelease(str);
+        return c;
+    }
 
     int press_key_char(void *, void *k_)
     {
         const char *k = *(const char **)k_;
 
-        NSString *str = [[NSString alloc] initWithUTF8String:k];
-        UniChar chr = [str characterAtIndex:0];
-        CGKeyCode c = keyCodeForChar(chr);
+        CGKeyCode c = make_keycode(k);
 
         CGEventRef e1 = CGEventCreateKeyboardEvent(NULL, c, true);
         CGEventPost(kCGHIDEventTap, e1);
@@ -151,8 +163,6 @@ namespace
         CGEventRef e2 = CGEventCreateKeyboardEvent(NULL, c, false);
         CGEventPost(kCGHIDEventTap, e2);
         CFRelease(e2);
-
-        CFRelease(str);
 
         return 0;
     }
@@ -216,7 +226,7 @@ namespace
     struct keypress_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
         keypress_input_t(sysin_events::sysin_events_t::impl_t *root, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain),
-            root_(root), index_(index), code_(0), hold_(true), threshold_(0.0) {}
+            root_(root), index_(index), code_(0), char_(UINT16_MAX), hold_(true), threshold_(0.0) {}
         ~keypress_input_t();
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
@@ -229,6 +239,14 @@ namespace
             keypress_input_t *i = (keypress_input_t *)i_;
             unsigned v = *(unsigned *)v_;
             i->code_ = v;
+            return 0;
+        }
+        
+        static int __set_character(void *i_, void *v_)
+        {
+            keypress_input_t *i = (keypress_input_t *)i_;
+            CGKeyCode v = *(CGKeyCode *)v_;
+            i->char_ = v;
             return 0;
         }
 
@@ -247,10 +265,26 @@ namespace
             i->threshold_ = v;
             return 0;
         }
+        
+        unsigned get_code()
+        {
+            if(char_ != UINT16_MAX)
+            {
+                return char_;
+            }
+            
+            return code_;
+        }
 
         void set_code(unsigned code)
         {
             piw::tsd_fastcall(keypress_input_t::__set_code,this,&code);
+        }
+
+        void set_character(const char *chr)
+        {
+            CGKeyCode code = make_keycode(chr);
+            piw::tsd_fastcall(keypress_input_t::__set_character,this,&code);
         }
         
         void set_hold(bool hold)
@@ -263,11 +297,15 @@ namespace
             piw::tsd_fastcall(keypress_input_t::__set_threshold,this,&threshold);
         }
 
-        sysin_events::sysin_events_t::impl_t * const root_;
-        const unsigned index_;
-        unsigned code_;
-        bool hold_;
-        float threshold_;
+        private:
+            sysin_events::sysin_events_t::impl_t * const root_;
+            const unsigned index_;
+            unsigned code_;
+            CGKeyCode char_;
+            
+        public:
+            bool hold_;
+            float threshold_;
     };
 }
 
@@ -539,16 +577,17 @@ namespace
                             {
                                 if(exceeds_threshold(v))
                                 {
-                                    key_down(root_->code_);
+                                    unsigned code = root_->get_code();
+                                    key_down(code);
                                     down_ = true;
                                     if(root_->hold_)
                                     {
-                                        down_code_ = root_->code_;
+                                        down_code_ = code;
                                         held_ = true;
                                     }
                                     else
                                     {
-                                        key_up(root_->code_);
+                                        key_up(code);
                                     }
                                 }
                             }
@@ -683,6 +722,15 @@ void sysin_events::sysin_events_t::set_keypress_code(unsigned index, unsigned co
     if(i)
     {
         i->set_code(code);
+    }
+}
+
+void sysin_events::sysin_events_t::set_keypress_character(unsigned index, const char *chr)
+{
+    keypress_input_t *i = impl_->get_keypress_input(index);
+    if(i)
+    {
+        i->set_character(chr);
     }
 }
 
