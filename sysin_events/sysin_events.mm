@@ -112,22 +112,31 @@ namespace
        return code;
    }
    
-   int press_key_code(void *r_, void *k_)
+   void key_down(unsigned code)
+   {
+       CGEventRef e = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)code, true);
+       CGEventPost(kCGHIDEventTap, e);
+       CFRelease(e);
+   }
+   
+   void key_up(unsigned code)
+   {
+       CGEventRef e = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)code, false);
+       CGEventPost(kCGHIDEventTap, e);
+       CFRelease(e);
+   }
+   
+   int press_key_code(void *, void *k_)
    {
        unsigned k = *(unsigned *)k_;
 
-       CGEventRef e1 = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)k, true);
-       CGEventPost(kCGHIDEventTap, e1);
-       CFRelease(e1);
-
-       CGEventRef e2 = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)k, false);
-       CGEventPost(kCGHIDEventTap, e2);
-       CFRelease(e2);
+       key_down(k);
+       key_up(k);
 
        return 0;
    }
 
-   int press_key_char(void *r_, void *k_)
+   int press_key_char(void *, void *k_)
    {
        const char *k = *(const char **)k_;
 
@@ -201,16 +210,45 @@ namespace
 
     struct keypress_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
-        keypress_input_t(sysin_events::sysin_events_t::impl_t *root, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain), root_(root), index_(index) {}
+        keypress_input_t(sysin_events::sysin_events_t::impl_t *root, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain),
+            root_(root), index_(index), code_(0), hold_(true) {}
         ~keypress_input_t();
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
         unsigned long long cfilterctl_thru() { return 0; }
         unsigned long long cfilterctl_inputs() { return IN_PRESSURE_MASK; }
         unsigned long long cfilterctl_outputs() { return 0; }
+        
+        static int __set_code(void *i_, void *v_)
+        {
+            keypress_input_t *i = (keypress_input_t *)i_;
+            unsigned v = *(unsigned *)v_;
+            i->code_ = v;
+            return 0;
+        }
+
+        static int __set_hold(void *i_, void *v_)
+        {
+            keypress_input_t *i = (keypress_input_t *)i_;
+            bool v = *(bool *)v_;
+            i->hold_ = v;
+            return 0;
+        }
+
+        void set_code(unsigned code)
+        {
+            piw::tsd_fastcall(keypress_input_t::__set_code,this,&code);
+        }
+        
+        void set_hold(bool hold)
+        {
+            piw::tsd_fastcall(keypress_input_t::__set_hold,this,&hold);
+        }
 
         sysin_events::sysin_events_t::impl_t * const root_;
         const unsigned index_;
+        unsigned code_;
+        bool hold_;
     };
 }
 
@@ -241,12 +279,12 @@ namespace sysin_events
             if(d.is_long())
             {
                 unsigned code = d.as_long();
-                piw::tsd_fastcall(press_key_code,this,&code);
+                piw::tsd_fastcall(press_key_code,(void *)0,&code);
             }
             else if(d.is_string() && d.as_stringlen() > 0)
             {
                 const char* data = d.as_string();
-                piw::tsd_fastcall(press_key_char,this,&data);
+                piw::tsd_fastcall(press_key_char,(void *)0,&data);
             }
         }
 
@@ -283,6 +321,20 @@ namespace sysin_events
         {
             keypress_inputs_.alternate().erase(index);
             keypress_inputs_.exchange();
+        }
+        
+        keypress_input_t *get_keypress_input(const unsigned index)
+        {
+            pic::flipflop_t<std::map<unsigned,keypress_input_t *> >::guard_t g(keypress_inputs_);
+            
+            std::map<unsigned,keypress_input_t *>::const_iterator it;
+            it = g.value().find(index);
+            if(it != g.value().end())
+            {
+                return it->second;
+            }
+            
+            return 0;
         }
 
         piw::change_nb_t press_key()
@@ -432,14 +484,14 @@ namespace
             return (value > 0) - (value < 0);
         }
 
-        mouse_input_t *root_;
+        mouse_input_t * const root_;
 
         piw::data_nb_t id_;
     };
     
     struct keypress_func_t: piw::cfilterfunc_t
     {
-        keypress_func_t(keypress_input_t *root) : root_(root)
+        keypress_func_t(keypress_input_t *root) : root_(root), held_(false), down_(false), down_code_(0)
         {
         }
 
@@ -448,6 +500,7 @@ namespace
             id_ = id;
             
             env->cfilterenv_reset(IN_KEY_PRESSURE, id.time());
+            down_ = false;
             
             return true;
         }
@@ -467,6 +520,20 @@ namespace
                 {
                     case IN_KEY_PRESSURE:
                         {
+                            if(!down_)
+                            {
+                                key_down(root_->code_);
+                                down_ = true;
+                                if(root_->hold_)
+                                {
+                                    down_code_ = root_->code_;
+                                    held_ = true;
+                                }
+                                else
+                                {
+                                    key_up(root_->code_);
+                                }
+                            }
                         }
                         break;
                 }
@@ -478,22 +545,33 @@ namespace
         bool cfilterfunc_end(piw::cfilterenv_t *env, unsigned long long to)
         {
             id_ = piw::makenull_nb(to);
+            
+            if(held_)
+            {
+                key_up(down_code_);
+                held_ = false;
+            }
+            down_ = false;
+            down_code_ = 0;
 
             return false;
         }
 
-        keypress_input_t *root_;
+        keypress_input_t * const root_;
 
         piw::data_nb_t id_;
+        bool held_;
+        bool down_;
+        unsigned down_code_;
     };
 }
 
-piw::cfilterfunc_t * mouse_input_t::cfilterctl_create(const piw::data_t &path)
+piw::cfilterfunc_t *mouse_input_t::cfilterctl_create(const piw::data_t &path)
 {
     return new mouse_func_t(this);
 }
     
-piw::cfilterfunc_t * keypress_input_t::cfilterctl_create(const piw::data_t &path)
+piw::cfilterfunc_t *keypress_input_t::cfilterctl_create(const piw::data_t &path)
 {
     return new keypress_func_t(this);
 }
@@ -513,3 +591,22 @@ void sysin_events::sysin_events_t::set_mouse_x_scale(float v) { piw::tsd_fastcal
 void sysin_events::sysin_events_t::set_mouse_y_scale(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_y_scale,&impl_->mouseinput_,&v); }
 void sysin_events::sysin_events_t::set_mouse_x_deadband(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_x_deadband,&impl_->mouseinput_,&v); }
 void sysin_events::sysin_events_t::set_mouse_y_deadband(float v) { piw::tsd_fastcall(mouse_input_t::__set_mouse_y_deadband,&impl_->mouseinput_,&v); }
+
+void sysin_events::sysin_events_t::set_keypress_code(unsigned index, unsigned code)
+{
+    keypress_input_t *i = impl_->get_keypress_input(index);
+    if(i)
+    {
+        i->set_code(code);
+    }
+}
+
+void sysin_events::sysin_events_t::set_keypress_hold(unsigned index, bool flag)
+{
+    keypress_input_t *i = impl_->get_keypress_input(index);
+    if(i)
+    {
+        i->set_hold(flag);
+    }
+}
+

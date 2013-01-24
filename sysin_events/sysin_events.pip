@@ -17,4 +17,7 @@ class sysin_events[sysin_events::sysin_events_t]
     void set_mouse_y_scale(float)
     void set_mouse_x_deadband(float)
     void set_mouse_y_deadband(float)
+
+    void set_keypress_code(unsigned, unsigned)
+    void set_keypress_hold(unsigned, bool)
 }

@@ -41,6 +41,9 @@ namespace sysin_events
             void set_mouse_y_scale(float v);
             void set_mouse_x_deadband(float v);
             void set_mouse_y_deadband(float v);
+            
+            void set_keypress_code(unsigned index, unsigned code);
+            void set_keypress_hold(unsigned index, bool flag);
   
             class impl_t;
         private:

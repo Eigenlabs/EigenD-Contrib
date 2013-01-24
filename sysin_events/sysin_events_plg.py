@@ -34,14 +34,24 @@ class KeyPress(atom.Atom):
         self.__input = bundles.VectorInput(self.__inputcookie, agent.domain, signals=(1,))
 
         self[1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="pressure input", policy=self.__input.vector_policy(1,False))
-        self[2] = atom.Atom(domain=domain.BoundedIntOrNull(0,127), names='ansi code', policy=atom.default_policy(self.__code))
-        self[3] = atom.Atom(domain=domain.String(), names='character', policy=atom.default_policy(self.__character))
+        
+        self[2] = atom.Atom(domain=domain.BoundedInt(0,127), names='ansi code', policy=atom.default_policy(self.__code))
+        self[3] = atom.Atom(domain=domain.String(), names='character', init='', policy=atom.default_policy(self.__character))
+        self[4] = atom.Atom(domain=domain.Bool(), names='hold', init=True, policy=atom.default_policy(self.__hold))
 
     def __code(self,v):
-        self[1].set_value(v)
+        self[2].set_value(v)
+        self.__agent.sysin_events.set_keypress_code(self.__index, v);
+        return True
 
     def __character(self,v):
-        self[2].set_value(v)
+        self[3].set_value(v)
+        return True
+
+    def __hold(self,v):
+        self[4].set_value(v)
+        self.__agent.sysin_events.set_keypress_hold(self.__index, v);
+        return True
 
     def disconnect(self):
         self.__agent.sysin_events.remove_keypress_input(self.__index)
