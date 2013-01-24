@@ -44,6 +44,7 @@ namespace sysin_events
             
             void set_keypress_code(unsigned index, unsigned code);
             void set_keypress_hold(unsigned index, bool flag);
+            void set_keypress_threshold(unsigned index, float threshold);
   
             class impl_t;
         private:

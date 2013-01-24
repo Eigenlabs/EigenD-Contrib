@@ -39,123 +39,128 @@
 
 namespace
 {
-   // The two methods below come from http://stackoverflow.com/questions/1918841/how-to-convert-ascii-character-to-cgkeycode
+    // The two methods below come from http://stackoverflow.com/questions/1918841/how-to-convert-ascii-character-to-cgkeycode
 
-   /* Returns string representation of key, if it is printable.
-    * Ownership follows the Create Rule; that is, it is the caller's
-    * responsibility to release the returned object. */
-   CFStringRef createStringForKey(CGKeyCode keyCode)
-   {
-       TISInputSourceRef currentKeyboard = TISCopyCurrentKeyboardInputSource();
-       CFDataRef layoutData = (CFDataRef)TISGetInputSourceProperty(currentKeyboard, kTISPropertyUnicodeKeyLayoutData);
-       const UCKeyboardLayout *keyboardLayout =
-           (const UCKeyboardLayout *)CFDataGetBytePtr(layoutData);
+    /* Returns string representation of key, if it is printable.
+     * Ownership follows the Create Rule; that is, it is the caller's
+     * responsibility to release the returned object. */
+    CFStringRef createStringForKey(CGKeyCode keyCode)
+    {
+        TISInputSourceRef currentKeyboard = TISCopyCurrentKeyboardInputSource();
+        CFDataRef layoutData = (CFDataRef)TISGetInputSourceProperty(currentKeyboard, kTISPropertyUnicodeKeyLayoutData);
+        const UCKeyboardLayout *keyboardLayout =
+            (const UCKeyboardLayout *)CFDataGetBytePtr(layoutData);
 
-       UInt32 keysDown = 0;
-       UniChar chars[4];
-       UniCharCount realLength;
+        UInt32 keysDown = 0;
+        UniChar chars[4];
+        UniCharCount realLength;
 
-       UCKeyTranslate(keyboardLayout,
-               keyCode,
-               kUCKeyActionDisplay,
-               0,
-               LMGetKbdType(),
-               kUCKeyTranslateNoDeadKeysBit,
-               &keysDown,
-               sizeof(chars) / sizeof(chars[0]),
-               &realLength,
-               chars);
-       CFRelease(currentKeyboard);    
+        UCKeyTranslate(keyboardLayout,
+                keyCode,
+                kUCKeyActionDisplay,
+                0,
+                LMGetKbdType(),
+                kUCKeyTranslateNoDeadKeysBit,
+                &keysDown,
+                sizeof(chars) / sizeof(chars[0]),
+                &realLength,
+                chars);
+        CFRelease(currentKeyboard);    
 
-       return CFStringCreateWithCharacters(kCFAllocatorDefault, chars, 1);
-   }
+        return CFStringCreateWithCharacters(kCFAllocatorDefault, chars, 1);
+    }
 
-   /* Returns key code for given character via the above function, or UINT16_MAX
-    * on error. */
-   CGKeyCode keyCodeForChar(UniChar character)
-   {
-       static CFMutableDictionaryRef charToCodeDict = NULL;
-       CGKeyCode code;
-       CFStringRef charStr = NULL;
+    /* Returns key code for given character via the above function, or UINT16_MAX
+     * on error. */
+    CGKeyCode keyCodeForChar(UniChar character)
+    {
+        static CFMutableDictionaryRef charToCodeDict = NULL;
+        CGKeyCode code;
+        CFStringRef charStr = NULL;
 
-       /* Generate table of keycodes and characters. */
-       if (charToCodeDict == NULL)
-       {
-           size_t i;
-           charToCodeDict = CFDictionaryCreateMutable(kCFAllocatorDefault,
-                   128,
-                   &kCFCopyStringDictionaryKeyCallBacks,
-                   NULL);
-           if (charToCodeDict == NULL) return UINT16_MAX;
+        /* Generate table of keycodes and characters. */
+        if (charToCodeDict == NULL)
+        {
+            size_t i;
+            charToCodeDict = CFDictionaryCreateMutable(kCFAllocatorDefault,
+                    128,
+                    &kCFCopyStringDictionaryKeyCallBacks,
+                    NULL);
+            if (charToCodeDict == NULL) return UINT16_MAX;
 
-           /* Loop through every keycode (0 - 127) to find its current mapping. */
-           for (i = 0; i < 128; ++i)
-           {
-               CFStringRef string = createStringForKey((CGKeyCode)i);
-               if (string != NULL)
-               {
-                   CFDictionaryAddValue(charToCodeDict, string, (const void *)i);
-                   CFRelease(string);
-               }
-           }
-       }
+            /* Loop through every keycode (0 - 127) to find its current mapping. */
+            for (i = 0; i < 128; ++i)
+            {
+                CFStringRef string = createStringForKey((CGKeyCode)i);
+                if (string != NULL)
+                {
+                    CFDictionaryAddValue(charToCodeDict, string, (const void *)i);
+                    CFRelease(string);
+                }
+            }
+        }
 
-       charStr = CFStringCreateWithCharacters(kCFAllocatorDefault, &character, 1);
+        charStr = CFStringCreateWithCharacters(kCFAllocatorDefault, &character, 1);
 
-       /* Our values may be NULL (0), so we need to use this function. */
-       if (!CFDictionaryGetValueIfPresent(charToCodeDict, charStr, (const void **)&code))
-       {
-           code = UINT16_MAX;
-       }
+        /* Our values may be NULL (0), so we need to use this function. */
+        if (!CFDictionaryGetValueIfPresent(charToCodeDict, charStr, (const void **)&code))
+        {
+            code = UINT16_MAX;
+        }
 
-       CFRelease(charStr);
-       return code;
-   }
-   
-   void key_down(unsigned code)
-   {
-       CGEventRef e = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)code, true);
-       CGEventPost(kCGHIDEventTap, e);
-       CFRelease(e);
-   }
-   
-   void key_up(unsigned code)
-   {
-       CGEventRef e = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)code, false);
-       CGEventPost(kCGHIDEventTap, e);
-       CFRelease(e);
-   }
-   
-   int press_key_code(void *, void *k_)
-   {
-       unsigned k = *(unsigned *)k_;
+        CFRelease(charStr);
+        return code;
+    }
 
-       key_down(k);
-       key_up(k);
+    void key_down(unsigned code)
+    {
+        CGEventRef e = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)code, true);
+        CGEventPost(kCGHIDEventTap, e);
+        CFRelease(e);
+    }
 
-       return 0;
-   }
+    void key_up(unsigned code)
+    {
+        CGEventRef e = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)code, false);
+        CGEventPost(kCGHIDEventTap, e);
+        CFRelease(e);
+    }
 
-   int press_key_char(void *, void *k_)
-   {
-       const char *k = *(const char **)k_;
+    int press_key_code(void *, void *k_)
+    {
+        unsigned k = *(unsigned *)k_;
 
-       NSString *str = [[NSString alloc] initWithUTF8String:k];
-       UniChar chr = [str characterAtIndex:0];
-       CGKeyCode c = keyCodeForChar(chr);
+        key_down(k);
+        key_up(k);
 
-       CGEventRef e1 = CGEventCreateKeyboardEvent(NULL, c, true);
-       CGEventPost(kCGHIDEventTap, e1);
-       CFRelease(e1);
+        return 0;
+    }
 
-       CGEventRef e2 = CGEventCreateKeyboardEvent(NULL, c, false);
-       CGEventPost(kCGHIDEventTap, e2);
-       CFRelease(e2);
+    int press_key_char(void *, void *k_)
+    {
+        const char *k = *(const char **)k_;
 
-       CFRelease(str);
+        NSString *str = [[NSString alloc] initWithUTF8String:k];
+        UniChar chr = [str characterAtIndex:0];
+        CGKeyCode c = keyCodeForChar(chr);
 
-       return 0;
-   }
+        CGEventRef e1 = CGEventCreateKeyboardEvent(NULL, c, true);
+        CGEventPost(kCGHIDEventTap, e1);
+        CFRelease(e1);
+
+        CGEventRef e2 = CGEventCreateKeyboardEvent(NULL, c, false);
+        CGEventPost(kCGHIDEventTap, e2);
+        CFRelease(e2);
+
+        CFRelease(str);
+
+        return 0;
+    }
+
+    inline int sign(float value)
+    {
+        return (value > 0) - (value < 0);
+    }
 
     struct mouse_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
@@ -211,7 +216,7 @@ namespace
     struct keypress_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
         keypress_input_t(sysin_events::sysin_events_t::impl_t *root, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain),
-            root_(root), index_(index), code_(0), hold_(true) {}
+            root_(root), index_(index), code_(0), hold_(true), threshold_(0.0) {}
         ~keypress_input_t();
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
@@ -235,6 +240,14 @@ namespace
             return 0;
         }
 
+        static int __set_threshold(void *i_, void *v_)
+        {
+            keypress_input_t *i = (keypress_input_t *)i_;
+            float v = *(float *)v_;
+            i->threshold_ = v;
+            return 0;
+        }
+
         void set_code(unsigned code)
         {
             piw::tsd_fastcall(keypress_input_t::__set_code,this,&code);
@@ -244,11 +257,17 @@ namespace
         {
             piw::tsd_fastcall(keypress_input_t::__set_hold,this,&hold);
         }
+        
+        void set_threshold(float threshold)
+        {
+            piw::tsd_fastcall(keypress_input_t::__set_threshold,this,&threshold);
+        }
 
         sysin_events::sysin_events_t::impl_t * const root_;
         const unsigned index_;
         unsigned code_;
         bool hold_;
+        float threshold_;
     };
 }
 
@@ -479,11 +498,6 @@ namespace
             return false;
         }
 
-        static inline int sign(float value)
-        {
-            return (value > 0) - (value < 0);
-        }
-
         mouse_input_t * const root_;
 
         piw::data_nb_t id_;
@@ -520,18 +534,29 @@ namespace
                 {
                     case IN_KEY_PRESSURE:
                         {
+                            float v = d.as_norm();
                             if(!down_)
                             {
-                                key_down(root_->code_);
-                                down_ = true;
-                                if(root_->hold_)
+                                if(exceeds_threshold(v))
                                 {
-                                    down_code_ = root_->code_;
-                                    held_ = true;
+                                    key_down(root_->code_);
+                                    down_ = true;
+                                    if(root_->hold_)
+                                    {
+                                        down_code_ = root_->code_;
+                                        held_ = true;
+                                    }
+                                    else
+                                    {
+                                        key_up(root_->code_);
+                                    }
                                 }
-                                else
+                            }
+                            else
+                            {
+                                if(!exceeds_threshold(v))
                                 {
-                                    key_up(root_->code_);
+                                    release_key();
                                 }
                             }
                         }
@@ -546,6 +571,30 @@ namespace
         {
             id_ = piw::makenull_nb(to);
             
+            release_key();
+
+            return false;
+        }
+        
+        bool exceeds_threshold(float v)
+        {
+            int sign_v = sign(v);
+            int sign_t = sign(root_->threshold_);
+            if(root_->threshold_ != 0.f)
+            {
+                if((sign_v != sign_t) ||
+                   (sign_v < 0 && sign_t < 0 && v > root_->threshold_) ||
+                   (sign_v > 0 && sign_t > 0 && v < root_->threshold_))
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        void release_key()
+        {
             if(held_)
             {
                 key_up(down_code_);
@@ -553,8 +602,6 @@ namespace
             }
             down_ = false;
             down_code_ = 0;
-
-            return false;
         }
 
         keypress_input_t * const root_;
@@ -610,3 +657,11 @@ void sysin_events::sysin_events_t::set_keypress_hold(unsigned index, bool flag)
     }
 }
 
+void sysin_events::sysin_events_t::set_keypress_threshold(unsigned index, float threshold)
+{
+    keypress_input_t *i = impl_->get_keypress_input(index);
+    if(i)
+    {
+        i->set_threshold(threshold);
+    }
+}

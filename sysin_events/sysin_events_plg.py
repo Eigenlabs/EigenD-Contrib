@@ -38,6 +38,7 @@ class KeyPress(atom.Atom):
         self[2] = atom.Atom(domain=domain.BoundedInt(0,127), names='ansi code', policy=atom.default_policy(self.__code))
         self[3] = atom.Atom(domain=domain.String(), names='character', init='', policy=atom.default_policy(self.__character))
         self[4] = atom.Atom(domain=domain.Bool(), names='hold', init=True, policy=atom.default_policy(self.__hold))
+        self[5] = atom.Atom(domain=domain.BoundedFloat(-1,1), names='threshold', init=0.0, policy=atom.default_policy(self.__threshold))
 
     def __code(self,v):
         self[2].set_value(v)
@@ -51,6 +52,11 @@ class KeyPress(atom.Atom):
     def __hold(self,v):
         self[4].set_value(v)
         self.__agent.sysin_events.set_keypress_hold(self.__index, v);
+        return True
+
+    def __threshold(self,v):
+        self[5].set_value(v)
+        self.__agent.sysin_events.set_keypress_threshold(self.__index, v);
         return True
 
     def disconnect(self):
