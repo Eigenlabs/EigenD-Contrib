@@ -34,21 +34,68 @@
 
 #define SYSIN_EVENTS_DEBUG 0 
 
-namespace sysin_events
+namespace
 {
-    struct sysin_events_t::impl_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t, virtual public pic::tracked_t
+    struct mouseinput_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
-        impl_t(piw::clockdomain_ctl_t *domain) : cfilter_t(this, 0, domain), mouse_x_scale_(2.f), mouse_y_scale_(-1.f),
-            mouse_x_deadband_(0.2f), mouse_y_deadband_(0.2f),
-            mouse_1_down_(false), mouse_2_down_(false) {}
+        mouseinput_t(piw::clockdomain_ctl_t *domain) : cfilter_t(this, 0, domain), mouse_x_scale_(2.f), mouse_y_scale_(-1.f),
+            mouse_x_deadband_(0.1f), mouse_y_deadband_(0.1f), mouse_1_down_(false), mouse_2_down_(false) {}
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
         unsigned long long cfilterctl_thru() { return 0; }
         unsigned long long cfilterctl_inputs() { return IN_MASK; }
         unsigned long long cfilterctl_outputs() { return 0; }
+
+        static int __set_mouse_x_scale(void *i_, void *v_)
+        {
+            mouseinput_t *i = (mouseinput_t *)i_;
+            float v = *(float *)v_;
+            i->mouse_x_scale_ = v;
+            return 0;
+        }
+
+        static int __set_mouse_y_scale(void *i_, void *v_)
+        {
+            mouseinput_t *i = (mouseinput_t *)i_;
+            float v = *(float *)v_;
+            i->mouse_y_scale_ = v;
+            return 0;
+        }
+
+        static int __set_mouse_x_deadband(void *i_, void *v_)
+        {
+            mouseinput_t *i = (mouseinput_t *)i_;
+            float v = *(float *)v_;
+            i->mouse_x_deadband_ = v;
+            return 0;
+        }
+
+        static int __set_mouse_y_deadband(void *i_, void *v_)
+        {
+            mouseinput_t *i = (mouseinput_t *)i_;
+            float v = *(float *)v_;
+            i->mouse_y_deadband_ = v;
+            return 0;
+        }
         
+        float mouse_x_scale_;
+        float mouse_y_scale_;
+        float mouse_x_deadband_;
+        float mouse_y_deadband_;
+
+        bool mouse_1_down_;
+        bool mouse_2_down_;
+    };
+}
+
+namespace sysin_events
+{
+    struct sysin_events_t::impl_t: public pic::nocopy_t, virtual public pic::tracked_t
+    {
+        impl_t(piw::clockdomain_ctl_t *domain) : domain_(domain), mouseinput_(domain) {}
+
         // The two methods below come from http://stackoverflow.com/questions/1918841/how-to-convert-ascii-character-to-cgkeycode
-        
+
         /* Returns string representation of key, if it is printable.
          * Ownership follows the Create Rule; that is, it is the caller's
          * responsibility to release the returned object. */
@@ -64,15 +111,15 @@ namespace sysin_events
             UniCharCount realLength;
 
             UCKeyTranslate(keyboardLayout,
-                           keyCode,
-                           kUCKeyActionDisplay,
-                           0,
-                           LMGetKbdType(),
-                           kUCKeyTranslateNoDeadKeysBit,
-                           &keysDown,
-                           sizeof(chars) / sizeof(chars[0]),
-                           &realLength,
-                           chars);
+                    keyCode,
+                    kUCKeyActionDisplay,
+                    0,
+                    LMGetKbdType(),
+                    kUCKeyTranslateNoDeadKeysBit,
+                    &keysDown,
+                    sizeof(chars) / sizeof(chars[0]),
+                    &realLength,
+                    chars);
             CFRelease(currentKeyboard);    
 
             return CFStringCreateWithCharacters(kCFAllocatorDefault, chars, 1);
@@ -91,9 +138,9 @@ namespace sysin_events
             {
                 size_t i;
                 charToCodeDict = CFDictionaryCreateMutable(kCFAllocatorDefault,
-                                                           128,
-                                                           &kCFCopyStringDictionaryKeyCallBacks,
-                                                           NULL);
+                        128,
+                        &kCFCopyStringDictionaryKeyCallBacks,
+                        NULL);
                 if (charToCodeDict == NULL) return UINT16_MAX;
 
                 /* Loop through every keycode (0 - 127) to find its current mapping. */
@@ -119,15 +166,15 @@ namespace sysin_events
             CFRelease(charStr);
             return code;
         }
-        
+
         static int __press_key_code(void *r_, void *k_)
         {
             unsigned k = *(unsigned *)k_;
-            
+
             CGEventRef e1 = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)k, true);
             CGEventPost(kCGHIDEventTap, e1);
             CFRelease(e1);
-            
+
             CGEventRef e2 = CGEventCreateKeyboardEvent(NULL, (CGKeyCode)k, false);
             CGEventPost(kCGHIDEventTap, e2);
             CFRelease(e2);
@@ -138,7 +185,7 @@ namespace sysin_events
         static int __press_key_char(void *r_, void *k_)
         {
             const char *k = *(const char **)k_;
-            
+
             NSString *str = [[NSString alloc] initWithUTF8String:k];
             UniChar chr = [str characterAtIndex:0];
             CGKeyCode c = keyCodeForChar(chr);
@@ -172,45 +219,8 @@ namespace sysin_events
 
         piw::change_nb_t press_key() { return piw::change_nb_t::method(this,&sysin_events_t::impl_t::press_key_data); }
 
-        static int __set_mouse_x_scale(void *i_, void *v_)
-        {
-            sysin_events_t::sysin_events_t::impl_t *i = (sysin_events_t::sysin_events_t::impl_t *)i_;
-            float v = *(float *)v_;
-            i->mouse_x_scale_ = v;
-            return 0;
-        }
-
-        static int __set_mouse_y_scale(void *i_, void *v_)
-        {
-            sysin_events_t::sysin_events_t::impl_t *i = (sysin_events_t::sysin_events_t::impl_t *)i_;
-            float v = *(float *)v_;
-            i->mouse_y_scale_ = v;
-            return 0;
-        }
-
-        static int __set_mouse_x_deadband(void *i_, void *v_)
-        {
-            sysin_events_t::sysin_events_t::impl_t *i = (sysin_events_t::sysin_events_t::impl_t *)i_;
-            float v = *(float *)v_;
-            i->mouse_x_deadband_ = v;
-            return 0;
-        }
-
-        static int __set_mouse_y_deadband(void *i_, void *v_)
-        {
-            sysin_events_t::sysin_events_t::impl_t *i = (sysin_events_t::sysin_events_t::impl_t *)i_;
-            float v = *(float *)v_;
-            i->mouse_y_deadband_ = v;
-            return 0;
-        }
-        
-        float mouse_x_scale_;
-        float mouse_y_scale_;
-        float mouse_x_deadband_;
-        float mouse_y_deadband_;
-
-        bool mouse_1_down_;
-        bool mouse_2_down_;
+        piw::clockdomain_ctl_t * const domain_;
+        mouseinput_t mouseinput_;
     };
 }
 
@@ -218,7 +228,7 @@ namespace
 {
     struct sysin_events_func_t: piw::cfilterfunc_t
     {
-        sysin_events_func_t(sysin_events::sysin_events_t::impl_t *root) : root_(root)
+        sysin_events_func_t(mouseinput_t *root) : root_(root)
         {
         }
 
@@ -350,20 +360,22 @@ namespace
             return (value > 0) - (value < 0);
         }
 
-        sysin_events::sysin_events_t::impl_t *root_;
+        mouseinput_t *root_;
 
         piw::data_nb_t id_;
     };
 }
 
-piw::cfilterfunc_t * sysin_events::sysin_events_t::impl_t::cfilterctl_create(const piw::data_t &path) { return new sysin_events_func_t(this); }
+piw::cfilterfunc_t * mouseinput_t::cfilterctl_create(const piw::data_t &path) { return new sysin_events_func_t(this); }
 
 sysin_events::sysin_events_t::sysin_events_t(piw::clockdomain_ctl_t *domain) : impl_(new impl_t(domain)) {}
 sysin_events::sysin_events_t::~sysin_events_t() { delete impl_; }
-piw::cookie_t sysin_events::sysin_events_t::cookie() { return impl_->cookie(); }
+piw::cookie_t sysin_events::sysin_events_t::mouse_input() { return impl_->mouseinput_.cookie(); }
+piw::cookie_t sysin_events::sysin_events_t::create_keypress_input(unsigned index) { return piw::cookie_t(); }
+void sysin_events::sysin_events_t::remove_keypress_input(unsigned index) {  }
 piw::change_nb_t sysin_events::sysin_events_t::press_key() { return impl_->press_key(); }
-void sysin_events::sysin_events_t::set_mouse_x_scale(float v) { piw::tsd_fastcall(sysin_events::sysin_events_t::impl_t::__set_mouse_x_scale,impl_,&v); }
-void sysin_events::sysin_events_t::set_mouse_y_scale(float v) { piw::tsd_fastcall(sysin_events::sysin_events_t::impl_t::__set_mouse_y_scale,impl_,&v); }
-void sysin_events::sysin_events_t::set_mouse_x_deadband(float v) { piw::tsd_fastcall(sysin_events::sysin_events_t::impl_t::__set_mouse_x_deadband,impl_,&v); }
-void sysin_events::sysin_events_t::set_mouse_y_deadband(float v) { piw::tsd_fastcall(sysin_events::sysin_events_t::impl_t::__set_mouse_y_deadband,impl_,&v); }
+void sysin_events::sysin_events_t::set_mouse_x_scale(float v) { piw::tsd_fastcall(mouseinput_t::__set_mouse_x_scale,&impl_->mouseinput_,&v); }
+void sysin_events::sysin_events_t::set_mouse_y_scale(float v) { piw::tsd_fastcall(mouseinput_t::__set_mouse_y_scale,&impl_->mouseinput_,&v); }
+void sysin_events::sysin_events_t::set_mouse_x_deadband(float v) { piw::tsd_fastcall(mouseinput_t::__set_mouse_x_deadband,&impl_->mouseinput_,&v); }
+void sysin_events::sysin_events_t::set_mouse_y_deadband(float v) { piw::tsd_fastcall(mouseinput_t::__set_mouse_y_deadband,&impl_->mouseinput_,&v); }
 

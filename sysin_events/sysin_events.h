@@ -30,7 +30,10 @@ namespace sysin_events
         public:
             sysin_events_t(piw::clockdomain_ctl_t *domain);
             ~sysin_events_t();
-            piw::cookie_t cookie();
+            
+            piw::cookie_t mouse_input();
+            piw::cookie_t create_keypress_input(unsigned index);
+            void remove_keypress_input(unsigned index);
 
             piw::change_nb_t press_key();
   

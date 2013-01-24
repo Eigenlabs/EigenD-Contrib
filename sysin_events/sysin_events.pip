@@ -7,7 +7,10 @@ from piw[piw/piw.pip] import clockdomain_ctl, cookie, change_nb
 class sysin_events[sysin_events::sysin_events_t]
 {
     sysin_events(clockdomain_ctl *)
-    cookie cookie()
+    
+    cookie mouse_input()
+    cookie create_keypress_input(unsigned)
+    void remove_keypress_input(unsigned)
 
     change_nb press_key()
     void set_mouse_x_scale(float)
