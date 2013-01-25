@@ -172,6 +172,13 @@ namespace
     {
         return (value > 0) - (value < 0);
     }
+
+    void mousevent(CGEventType type, CGPoint position, CGMouseButton button)
+    {
+        CGEventRef e = CGEventCreateMouseEvent(CGEventSourceCreate(kCGEventSourceStateHIDSystemState), type, position, button);
+        CGEventPost(kCGHIDEventTap, e);
+        CFRelease(e);  
+    }
         
     bool exceeds_threshold(float v, float threshold)
     {
@@ -417,6 +424,21 @@ namespace sysin_events
             }
         }
 
+        void move_mouse_data(const piw::data_nb_t &d)
+        {
+            if(d.is_tuple() && d.as_tuplelen() == 2)
+            {
+                unsigned x = d.as_tuple_value(0).as_long();
+                unsigned y = d.as_tuple_value(1).as_long();
+                
+                CGPoint position = CGPointMake(x,y);
+                mousevent(kCGEventMouseMoved, position, NULL);
+                
+                if(mouseinput_.mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, NULL);
+                if(mouseinput_.mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, NULL);
+            }
+        }
+
         piw::cookie_t create_keypress_input(const unsigned index)
         {
             std::map<unsigned,keypress_input_t *>::iterator it;
@@ -471,6 +493,11 @@ namespace sysin_events
             return piw::change_nb_t::method(this, &sysin_events_t::impl_t::press_key_data);
         }
 
+        piw::change_nb_t move_mouse()
+        {
+            return piw::change_nb_t::method(this, &sysin_events_t::impl_t::move_mouse_data);
+        }
+
         piw::clockdomain_ctl_t * const domain_;
         mouse_input_t mouseinput_;
         pic::flipflop_t<std::map<unsigned,keypress_input_t *> > keypress_inputs_;
@@ -501,13 +528,6 @@ namespace
             return true;
         }
         
-        void mousevent(CGEventType type, CGPoint position, CGMouseButton button)
-        {
-            CGEventRef e = CGEventCreateMouseEvent(CGEventSourceCreate(kCGEventSourceStateHIDSystemState), type, position, button);
-            CGEventPost(kCGHIDEventTap, e);
-            CFRelease(e);  
-        }
-
         bool cfilterfunc_process(piw::cfilterenv_t *env, unsigned long long from, unsigned long long to, unsigned long samplerate, unsigned buffersize)
         {
             if(id_.is_null()) return false;
@@ -816,6 +836,11 @@ void sysin_events::sysin_events_t::remove_keypress_input(unsigned index)
 piw::change_nb_t sysin_events::sysin_events_t::press_key()
 {
     return impl_->press_key();
+}
+
+piw::change_nb_t sysin_events::sysin_events_t::move_mouse()
+{
+    return impl_->move_mouse();
 }
 
 void sysin_events::sysin_events_t::set_mouse_x_scale(float v)

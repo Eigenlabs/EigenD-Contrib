@@ -13,6 +13,7 @@ class sysin_events[sysin_events::sysin_events_t]
     void remove_keypress_input(unsigned)
 
     change_nb press_key()
+    change_nb move_mouse()
     
     void set_mouse_x_scale(float)
     void set_mouse_y_scale(float)

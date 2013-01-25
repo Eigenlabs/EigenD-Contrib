@@ -36,7 +36,8 @@ namespace sysin_events
             void remove_keypress_input(unsigned index);
 
             piw::change_nb_t press_key();
-  
+            piw::change_nb_t move_mouse();
+
             void set_mouse_x_scale(float v);
             void set_mouse_y_scale(float v);
             void set_mouse_x_deadband(float v);

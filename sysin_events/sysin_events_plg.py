@@ -167,6 +167,7 @@ class Agent(agent.Agent):
 
         self.add_verb2(1,'press([],~a,role(None,[matches([key])]),role(as,[numeric]))',create_action=self.__press_key)
         self.add_verb2(2,'press([],~a,role(None,[matches([character])]),role(as,[abstract]))',create_action=self.__press_character)
+        self.add_verb2(3,'move([],~a,role(None,[matches([mouse])]),role(to,[numeric]),role(with,[numeric]))',create_action=self.__move_mouse)
 
     def __set_samples(self,v):
         self[3][1].set_value(v)
@@ -234,5 +235,15 @@ class Agent(agent.Agent):
         v = action.abstract_string(val)
         if v.startswith('!'): v=v[1:]
         return piw.trigger(self.sysin_events.press_key(),piw.makestring_nb(v,0)),None
+
+    def __move_mouse(self,ctx,subj,dummy,v1,v2):
+        x = int(action.abstract_string(v1))
+        y = int(action.abstract_string(v2))
+        if x < 0 or y < 0:
+            return errors.invalid_thing(to, 'move')
+        v = piw.tuplenull_nb(0)
+        v = piw.tupleadd_nb(v, piw.makelong_nb(x,0))
+        v = piw.tupleadd_nb(v, piw.makelong_nb(y,0))
+        return piw.trigger(self.sysin_events.move_mouse(),v),None
 
 agent.main(Agent)
