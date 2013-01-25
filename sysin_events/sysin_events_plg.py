@@ -35,7 +35,7 @@ class KeyPress(atom.Atom):
 
         self[1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="pressure input", policy=self.__input.vector_policy(1,False))
         
-        self[2] = atom.Atom(domain=domain.BoundedInt(0,127), names='ansi code', policy=atom.default_policy(self.__set_code))
+        self[2] = atom.Atom(domain=domain.BoundedInt(0,127), names='key code', policy=atom.default_policy(self.__set_code))
         self[3] = atom.Atom(domain=domain.String(), names='character', init='', policy=atom.default_policy(self.__set_character))
         self[4] = atom.Atom(domain=domain.Bool(), names='hold', init=True, policy=atom.default_policy(self.__set_hold))
         self[5] = atom.Atom(domain=domain.BoundedFloat(-1,1), names='threshold', init=0.0, policy=atom.default_policy(self.__set_threshold))
@@ -165,7 +165,7 @@ class Agent(agent.Agent):
         self[4][7] = atom.Atom(domain=domain.Bool(), names='mouse button velocity 1', init=False, policy=atom.default_policy(self.__set_mouse_button_velocity1))
         self[4][8] = atom.Atom(domain=domain.Bool(), names='mouse button velocity 2', init=False, policy=atom.default_policy(self.__set_mouse_button_velocity2))
 
-        self.add_verb2(1,'press([],~a,role(None,[matches([ansi,key])]),role(as,[numeric]))',create_action=self.__press_key)
+        self.add_verb2(1,'press([],~a,role(None,[matches([key])]),role(as,[numeric]))',create_action=self.__press_key)
         self.add_verb2(2,'press([],~a,role(None,[matches([character])]),role(as,[abstract]))',create_action=self.__press_character)
 
     def __set_samples(self,v):
