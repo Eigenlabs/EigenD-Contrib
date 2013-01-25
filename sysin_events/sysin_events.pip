@@ -13,10 +13,15 @@ class sysin_events[sysin_events::sysin_events_t]
     void remove_keypress_input(unsigned)
 
     change_nb press_key()
+    
     void set_mouse_x_scale(float)
     void set_mouse_y_scale(float)
     void set_mouse_x_deadband(float)
     void set_mouse_y_deadband(float)
+    void set_mouse_button_threshold1(float)
+    void set_mouse_button_threshold2(float)
+    void set_mouse_button_velocity1(bool)
+    void set_mouse_button_velocity2(bool)
 
     void set_keypress_code(unsigned, unsigned)
     void set_keypress_character(unsigned, const char *)

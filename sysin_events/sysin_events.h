@@ -41,6 +41,10 @@ namespace sysin_events
             void set_mouse_y_scale(float v);
             void set_mouse_x_deadband(float v);
             void set_mouse_y_deadband(float v);
+            void set_mouse_button_threshold1(float v);
+            void set_mouse_button_threshold2(float v);
+            void set_mouse_button_velocity1(bool flag);
+            void set_mouse_button_velocity2(bool flag);
             
             void set_keypress_code(unsigned index, unsigned code);
             void set_keypress_character(unsigned index, const char *chr);

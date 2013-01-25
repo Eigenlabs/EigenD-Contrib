@@ -172,11 +172,30 @@ namespace
     {
         return (value > 0) - (value < 0);
     }
+        
+    bool exceeds_threshold(float v, float threshold)
+    {
+        if(threshold != 0.f)
+        {
+            int sign_v = sign(v);
+            int sign_t = sign(threshold);
+            if((sign_v != sign_t) ||
+               (sign_v < 0 && sign_t < 0 && v > threshold) ||
+               (sign_v > 0 && sign_t > 0 && v < threshold))
+            {
+                return false;
+            }
+        }
+            
+        return true;
+    }
 
     struct mouse_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
-        mouse_input_t(piw::clockdomain_ctl_t *domain) : cfilter_t(this, 0, domain), mouse_x_scale_(2.f), mouse_y_scale_(-1.f),
-            mouse_x_deadband_(0.1f), mouse_y_deadband_(0.1f), mouse_1_down_(false), mouse_2_down_(false) {}
+        mouse_input_t(sysin_events::sysin_events_t::impl_t *events, piw::clockdomain_ctl_t *domain) : cfilter_t(this, 0, domain),
+            events_(events), mouse_x_scale_(2.f), mouse_y_scale_(-1.f), mouse_x_deadband_(0.1f), mouse_y_deadband_(0.1f),
+            mouse_button_threshold1_(0), mouse_button_threshold2_(0), mouse_button_velocity1_(false), mouse_button_velocity2_(false),
+            mouse_1_down_(false), mouse_2_down_(false) {}
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
         unsigned long long cfilterctl_thru() { return 0; }
@@ -214,11 +233,50 @@ namespace
             i->mouse_y_deadband_ = v;
             return 0;
         }
+
+        static int __set_mouse_button_threshold1(void *i_, void *v_)
+        {
+            mouse_input_t *i = (mouse_input_t *)i_;
+            float v = *(float *)v_;
+            i->mouse_button_threshold1_ = v;
+            return 0;
+        }
+
+        static int __set_mouse_button_threshold2(void *i_, void *v_)
+        {
+            mouse_input_t *i = (mouse_input_t *)i_;
+            float v = *(float *)v_;
+            i->mouse_button_threshold2_ = v;
+            return 0;
+        }
+
+        static int __set_mouse_button_velocity1(void *i_, void *v_)
+        {
+            mouse_input_t *i = (mouse_input_t *)i_;
+            bool v = *(bool *)v_;
+            i->mouse_button_velocity1_ = v;
+            return 0;
+        }
+
+        static int __set_mouse_button_velocity2(void *i_, void *v_)
+        {
+            mouse_input_t *i = (mouse_input_t *)i_;
+            bool v = *(bool *)v_;
+            i->mouse_button_velocity2_ = v;
+            return 0;
+        }
+
+        sysin_events::sysin_events_t::impl_t * const events_;
         
         float mouse_x_scale_;
         float mouse_y_scale_;
         float mouse_x_deadband_;
         float mouse_y_deadband_;
+        
+        float mouse_button_threshold1_;
+        float mouse_button_threshold2_;
+        bool mouse_button_velocity1_;
+        bool mouse_button_velocity2_;
 
         bool mouse_1_down_;
         bool mouse_2_down_;
@@ -226,8 +284,8 @@ namespace
 
     struct keypress_input_t: piw::cfilterctl_t, piw::cfilter_t, public pic::nocopy_t
     {
-        keypress_input_t(sysin_events::sysin_events_t::impl_t *root, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain),
-            root_(root), index_(index), hold_(true), threshold_(0.0), velocity_(false), code_(0), char_(UINT16_MAX) {}
+        keypress_input_t(sysin_events::sysin_events_t::impl_t *events, piw::clockdomain_ctl_t *domain, const unsigned index) : cfilter_t(this, 0, domain),
+            events_(events), index_(index), hold_(true), threshold_(0.0), velocity_(false), code_(0), char_(UINT16_MAX) {}
         ~keypress_input_t();
         
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &path);
@@ -311,7 +369,7 @@ namespace
             piw::tsd_fastcall(keypress_input_t::__set_velocity,this,&velocity);
         }
 
-        sysin_events::sysin_events_t::impl_t * const root_;
+        sysin_events::sysin_events_t::impl_t * const events_;
         const unsigned index_;
         bool hold_;
         float threshold_;
@@ -327,7 +385,7 @@ namespace sysin_events
 {
     struct sysin_events_t::impl_t: public pic::nocopy_t, virtual public pic::tracked_t
     {
-        impl_t(piw::clockdomain_ctl_t *domain) : domain_(domain), mouseinput_(domain)
+        impl_t(piw::clockdomain_ctl_t *domain) : domain_(domain), mouseinput_(this, domain)
         {
         }
         
@@ -424,7 +482,7 @@ namespace
 {
     struct mouse_func_t: piw::cfilterfunc_t
     {
-        mouse_func_t(mouse_input_t *root) : root_(root)
+        mouse_func_t(mouse_input_t *input) : input_(input), detector_button1_(input->events_->velocity_config_), detector_button2_(input->events_->velocity_config_)
         {
         }
 
@@ -436,6 +494,9 @@ namespace
             env->cfilterenv_reset(IN_MOUSE_Y, id.time());
             env->cfilterenv_reset(IN_MOUSE_BUTTON_1, id.time());
             env->cfilterenv_reset(IN_MOUSE_BUTTON_2, id.time());
+
+            detector_button1_.init();
+            detector_button2_.init();
 
             return true;
         }
@@ -469,10 +530,10 @@ namespace
                     case IN_MOUSE_X:
                         {
                             float v = d.as_norm();
-                            if(fabs(v) >= root_->mouse_x_deadband_)
+                            if(fabs(v) >= input_->mouse_x_deadband_)
                             {
-                                v = v - (sign(v) * root_->mouse_x_deadband_);
-                                position.x += v*root_->mouse_x_scale_;
+                                v = v - (sign(v) * input_->mouse_x_deadband_);
+                                position.x += v*input_->mouse_x_scale_;
                                 moved = true;
                             }
                         }
@@ -480,24 +541,62 @@ namespace
                     case IN_MOUSE_Y:
                         {
                             float v = d.as_norm();
-                            if(fabs(v) >= root_->mouse_y_deadband_)
+                            if(fabs(v) >= input_->mouse_y_deadband_)
                             {
-                                v = v - (sign(v) * root_->mouse_y_deadband_);
-                                position.y += v*root_->mouse_y_scale_;
+                                v = v - (sign(v) * input_->mouse_y_deadband_);
+                                position.y += v*input_->mouse_y_scale_;
                                 moved = true;
                             }
                         }
                         break;
                     case IN_MOUSE_BUTTON_1:
-                        if(!root_->mouse_1_down_)
                         {
-                            button1 = true;
+                            double v = d.as_norm();
+                            if(!detector_button1_.is_started())
+                            {
+                                double velocity;
+                                if(detector_button1_.detect(d, &velocity) && input_->mouse_button_velocity1_)
+                                {
+                                    v = velocity;
+                                }
+                            }
+                            
+                            if(!input_->mouse_1_down_)
+                            {
+                                if(exceeds_threshold(v, input_->mouse_button_threshold1_))
+                                {
+                                    button1 = true;
+                                }
+                            }
+                            else if(!exceeds_threshold(v, input_->mouse_button_threshold1_))
+                            {
+                                release_button1();
+                            }
                         }
                         break;
                     case IN_MOUSE_BUTTON_2:
-                        if(!root_->mouse_2_down_)
                         {
-                            button2 = true;
+                            double v = d.as_norm();
+                            if(!detector_button2_.is_started())
+                            {
+                                double velocity;
+                                if(detector_button2_.detect(d, &velocity) && input_->mouse_button_velocity2_)
+                                {
+                                    v = velocity;
+                                }
+                            }
+
+                            if(!input_->mouse_2_down_)
+                            {
+                                if(exceeds_threshold(v, input_->mouse_button_threshold2_))
+                                {
+                                    button2 = true;
+                                }
+                            }
+                            else if(!exceeds_threshold(v, input_->mouse_button_threshold2_))
+                            {
+                                release_button2();
+                            }
                         }
                         break;
                 }
@@ -509,21 +608,21 @@ namespace
             if(button1)
             {
                 mousevent(kCGEventLeftMouseDown, position, kCGMouseButtonLeft);
-                root_->mouse_1_down_ = true;
+                input_->mouse_1_down_ = true;
             }
 
             if(button2)
             {
                 mousevent(kCGEventRightMouseDown, position, kCGMouseButtonRight);
-                root_->mouse_2_down_ = true;
+                input_->mouse_2_down_ = true;
             }
 
             if(moved)
             {
                 mousevent(kCGEventMouseMoved, position, NULL);
                 
-                if(root_->mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, NULL);
-                if(root_->mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, NULL);
+                if(input_->mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, NULL);
+                if(input_->mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, NULL);
             }
 
             return true;
@@ -531,34 +630,48 @@ namespace
 
         bool cfilterfunc_end(piw::cfilterenv_t *env, unsigned long long to)
         {
-            CGEventRef reference_event = CGEventCreate(NULL);
-            CGPoint position = CGEventGetLocation(reference_event);
-
-            if(root_->mouse_1_down_)
-            {
-                mousevent(kCGEventLeftMouseUp, position, kCGMouseButtonLeft);
-                root_->mouse_1_down_ = false;
-            }
-
-            if(root_->mouse_2_down_)
-            {
-                mousevent(kCGEventRightMouseUp, position, kCGMouseButtonRight);
-                root_->mouse_2_down_ = false;
-            }
+            release_button1();
+            release_button2();
             
             id_ = piw::makenull_nb(to);
 
             return false;
         }
+        
+        void release_button1()
+        {
+            if(input_->mouse_1_down_)
+            {
+                CGEventRef reference_event = CGEventCreate(NULL);
+                CGPoint position = CGEventGetLocation(reference_event);
 
-        mouse_input_t * const root_;
+                mousevent(kCGEventLeftMouseUp, position, kCGMouseButtonLeft);
+                input_->mouse_1_down_ = false;
+            }
+        }
+        
+        void release_button2()
+        {
+            if(input_->mouse_2_down_)
+            {
+                CGEventRef reference_event = CGEventCreate(NULL);
+                CGPoint position = CGEventGetLocation(reference_event);
+
+                mousevent(kCGEventRightMouseUp, position, kCGMouseButtonRight);
+                input_->mouse_2_down_ = false;
+            }
+        }
+
+        mouse_input_t * const input_;
 
         piw::data_nb_t id_;
+        piw::velocitydetector_t detector_button1_;
+        piw::velocitydetector_t detector_button2_;
     };
     
     struct keypress_func_t: piw::cfilterfunc_t
     {
-        keypress_func_t(keypress_input_t *root) : root_(root), held_(false), down_(false), down_code_(0), detector_(root_->root_->velocity_config_)
+        keypress_func_t(keypress_input_t *input) : input_(input), held_(false), down_(false), down_code_(0), detector_(input->events_->velocity_config_)
         {
         }
 
@@ -592,7 +705,7 @@ namespace
                             if(!detector_.is_started())
                             {
                                 double velocity;
-                                if(detector_.detect(d, &velocity) && root_->velocity_)
+                                if(detector_.detect(d, &velocity) && input_->velocity_)
                                 {
                                     v = velocity;
                                 }
@@ -600,12 +713,12 @@ namespace
 
                             if(!down_)
                             {
-                                if(exceeds_threshold(v))
+                                if(exceeds_threshold(v, input_->threshold_))
                                 {
-                                    unsigned code = root_->get_code();
+                                    unsigned code = input_->get_code();
                                     key_down(code);
                                     down_ = true;
-                                    if(root_->hold_)
+                                    if(input_->hold_)
                                     {
                                         down_code_ = code;
                                         held_ = true;
@@ -618,7 +731,7 @@ namespace
                             }
                             else
                             {
-                                if(!exceeds_threshold(v))
+                                if(!exceeds_threshold(v, input_->threshold_))
                                 {
                                     release_key();
                                 }
@@ -640,23 +753,6 @@ namespace
             return false;
         }
         
-        bool exceeds_threshold(float v)
-        {
-            if(root_->threshold_ != 0.f)
-            {
-                int sign_v = sign(v);
-                int sign_t = sign(root_->threshold_);
-                if((sign_v != sign_t) ||
-                   (sign_v < 0 && sign_t < 0 && v > root_->threshold_) ||
-                   (sign_v > 0 && sign_t > 0 && v < root_->threshold_))
-                {
-                    return false;
-                }
-            }
-            
-            return true;
-        }
-        
         void release_key()
         {
             if(held_)
@@ -668,7 +764,7 @@ namespace
             down_code_ = 0;
         }
 
-        keypress_input_t * const root_;
+        keypress_input_t * const input_;
 
         piw::data_nb_t id_;
         bool held_;
@@ -690,7 +786,7 @@ piw::cfilterfunc_t *keypress_input_t::cfilterctl_create(const piw::data_t &path)
 
 keypress_input_t::~keypress_input_t()
 {
-    root_->unregister_keypress_input(index_);
+    events_->unregister_keypress_input(index_);
 }
 
 sysin_events::sysin_events_t::sysin_events_t(piw::clockdomain_ctl_t *domain) : impl_(new impl_t(domain))
@@ -740,6 +836,26 @@ void sysin_events::sysin_events_t::set_mouse_x_deadband(float v)
 void sysin_events::sysin_events_t::set_mouse_y_deadband(float v)
 {
     piw::tsd_fastcall(mouse_input_t::__set_mouse_y_deadband,&impl_->mouseinput_,&v);
+}
+
+void sysin_events::sysin_events_t::set_mouse_button_threshold1(float v)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_button_threshold1,&impl_->mouseinput_,&v);
+}
+
+void sysin_events::sysin_events_t::set_mouse_button_threshold2(float v)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_button_threshold2,&impl_->mouseinput_,&v);
+}
+
+void sysin_events::sysin_events_t::set_mouse_button_velocity1(bool flag)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_button_velocity1,&impl_->mouseinput_,&flag);
+}
+
+void sysin_events::sysin_events_t::set_mouse_button_velocity2(bool flag)
+{
+    piw::tsd_fastcall(mouse_input_t::__set_mouse_button_velocity2,&impl_->mouseinput_,&flag);
 }
 
 void sysin_events::sysin_events_t::set_keypress_code(unsigned index, unsigned code)
