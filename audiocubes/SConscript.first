@@ -29,10 +29,10 @@ master_env.PiPythonPackage(package='audiocubes', per_agent='plg_audiocubes')
 master_env.PiAgent('audiocubes', 'plg_audiocubes', 'audiocubes_plg', cversion='1.0.0', lexicon='lexicon.txt')
 
 if master_env['IS_MACOSX']:
-	master_env.Append(LINKFLAGS=Split('-LlibCube2/bin/osx -lcube2 -framework CoreFoundation -framework IOKit'))
+	master_env.Append(LINKFLAGS=Split('-Laudiocubes/libCube2/bin/osx -lcube2 -framework CoreFoundation -framework IOKit'))
 
 if master_env['IS_WINDOWS']:
-    master_env.Append(LINKFLAGS=Split('/LIBPATH:libCube2\\bin\\win libCube2.lib setupapi.lib user32.lib /nodefaultlib:libcmt.lib /force:multiple'))
+    master_env.Append(LINKFLAGS=Split('/LIBPATH:audiocubes\\libCube2\\bin\\win libCube2.lib setupapi.lib user32.lib /nodefaultlib:libcmt.lib /force:multiple'))
 
 master_env.PiPipBinding('audiocubes_native', 'audiocubes.pip',
 	sources=plg_files, libraries=Split('pic piw pia'), package='audiocubes',
