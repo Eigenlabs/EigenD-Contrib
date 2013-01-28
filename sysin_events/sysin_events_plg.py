@@ -33,7 +33,7 @@ class KeyPress(atom.Atom):
         self.__inputcookie = self.__agent.sysin_events.create_keypress_input(self.__index)
         self.__input = bundles.VectorInput(self.__inputcookie, agent.domain, signals=(1,))
 
-        self[1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="pressure input", policy=self.__input.vector_policy(1,False))
+        self[1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="pressure input", policy=self.__input.vector_policy(1,True))
         
         self[2] = atom.Atom(domain=domain.BoundedInt(0,127), names='key code', policy=atom.default_policy(self.__set_code))
         self[3] = atom.Atom(domain=domain.String(), names='character', init='', policy=atom.default_policy(self.__set_character))
@@ -148,10 +148,10 @@ class Agent(agent.Agent):
         self.__input = bundles.VectorInput(self.sysin_events.mouse_input(), self.domain, signals=(1,2,3,4))
 
         self[1] = atom.Atom(names='mouse inputs')
-        self[1][1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse horizontal input", policy=self.__input.vector_policy(1,False))
-        self[1][2] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse vertical input", policy=self.__input.vector_policy(2,False))
-        self[1][3] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="left mouse button input", policy=self.__input.vector_policy(3,False))
-        self[1][4] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="right mouse button input", policy=self.__input.vector_policy(4,False))
+        self[1][1] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse horizontal input", policy=self.__input.vector_policy(1,True))
+        self[1][2] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="mouse vertical input", policy=self.__input.vector_policy(2,True))
+        self[1][3] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="left mouse button input", policy=self.__input.vector_policy(3,True))
+        self[1][4] = atom.Atom(domain=domain.BoundedFloat(-1,1), names="right mouse button input", policy=self.__input.vector_policy(4,True))
 
         self[2] = KeyPresses(self)
         

@@ -543,82 +543,93 @@ namespace
             bool button2 = false;
             while(env->cfilterenv_next(i, d, to))
             {
-                if(d.time() < from) continue;
+                if(d.time() < from || !d.is_array()) continue;
+            
+                double moved_x = 0;
+                double moved_y = 0;
 
-                switch(i)
+                const float *buffer = d.as_array();
+                for(unsigned j = 0; j < d.as_arraylen(); ++j)
                 {
-                    case IN_MOUSE_X:
-                        {
-                            float v = d.as_norm();
-                            if(fabs(v) >= input_->mouse_x_deadband_)
-                            {
-                                v = v - (sign(v) * input_->mouse_x_deadband_);
-                                position.x += v*input_->mouse_x_scale_;
-                                moved = true;
-                            }
-                        }
-                        break;
-                    case IN_MOUSE_Y:
-                        {
-                            float v = d.as_norm();
-                            if(fabs(v) >= input_->mouse_y_deadband_)
-                            {
-                                v = v - (sign(v) * input_->mouse_y_deadband_);
-                                position.y += v*input_->mouse_y_scale_;
-                                moved = true;
-                            }
-                        }
-                        break;
-                    case IN_MOUSE_BUTTON_1:
-                        {
-                            double v = d.as_norm();
-                            if(!detector_button1_.is_started())
-                            {
-                                double velocity;
-                                if(detector_button1_.detect(d, &velocity) && input_->mouse_button_velocity1_)
-                                {
-                                    v = velocity;
-                                }
-                            }
-                            
-                            if(!input_->mouse_1_down_)
-                            {
-                                if(exceeds_threshold(v, input_->mouse_button_threshold1_))
-                                {
-                                    button1 = true;
-                                }
-                            }
-                            else if(!exceeds_threshold(v, input_->mouse_button_threshold1_))
-                            {
-                                release_button1();
-                            }
-                        }
-                        break;
-                    case IN_MOUSE_BUTTON_2:
-                        {
-                            double v = d.as_norm();
-                            if(!detector_button2_.is_started())
-                            {
-                                double velocity;
-                                if(detector_button2_.detect(d, &velocity) && input_->mouse_button_velocity2_)
-                                {
-                                    v = velocity;
-                                }
-                            }
+                    double v = buffer[j];
 
-                            if(!input_->mouse_2_down_)
+                    switch(i)
+                    {
+                        case IN_MOUSE_X:
                             {
-                                if(exceeds_threshold(v, input_->mouse_button_threshold2_))
+                                if(fabs(v) >= input_->mouse_x_deadband_)
                                 {
-                                    button2 = true;
+                                    v = v - (sign(v) * input_->mouse_x_deadband_);
+                                    moved_x += v*input_->mouse_x_scale_;
+                                    moved = true;
                                 }
                             }
-                            else if(!exceeds_threshold(v, input_->mouse_button_threshold2_))
+                            break;
+                        case IN_MOUSE_Y:
                             {
-                                release_button2();
+                                if(fabs(v) >= input_->mouse_y_deadband_)
+                                {
+                                    v = v - (sign(v) * input_->mouse_y_deadband_);
+                                    moved_y += v*input_->mouse_y_scale_;
+                                    moved = true;
+                                }
                             }
-                        }
-                        break;
+                            break;
+                        case IN_MOUSE_BUTTON_1:
+                            {
+                                if(!detector_button1_.is_started())
+                                {
+                                    double velocity;
+                                    if(detector_button1_.detect(d, &velocity) && input_->mouse_button_velocity1_)
+                                    {
+                                        v = velocity;
+                                    }
+                                }
+                            
+                                if(!input_->mouse_1_down_)
+                                {
+                                    if(exceeds_threshold(v, input_->mouse_button_threshold1_))
+                                    {
+                                        button1 = true;
+                                    }
+                                }
+                                else if(!exceeds_threshold(v, input_->mouse_button_threshold1_))
+                                {
+                                    release_button1();
+                                }
+                            }
+                            break;
+                        case IN_MOUSE_BUTTON_2:
+                            {
+                                if(!detector_button2_.is_started())
+                                {
+                                    double velocity;
+                                    if(detector_button2_.detect(d, &velocity) && input_->mouse_button_velocity2_)
+                                    {
+                                        v = velocity;
+                                    }
+                                }
+
+                                if(!input_->mouse_2_down_)
+                                {
+                                    if(exceeds_threshold(v, input_->mouse_button_threshold2_))
+                                    {
+                                        button2 = true;
+                                    }
+                                }
+                                else if(!exceeds_threshold(v, input_->mouse_button_threshold2_))
+                                {
+                                    release_button2();
+                                }
+                            }
+                            break;
+                    }
+                }
+                
+                if(moved)
+                {
+                    position.x += (moved_x/d.as_arraylen())*32;
+                    position.y += (moved_y/d.as_arraylen())*32;
                 }
             }
             
@@ -715,49 +726,54 @@ namespace
 
             while(env->cfilterenv_next(i, d, to))
             {
-                if(d.time() < from) continue;
+                if(d.time() < from || !d.is_array()) continue;
 
-                switch(i)
+                const float *buffer = d.as_array();
+                for(unsigned j = 0; j < d.as_arraylen(); ++j)
                 {
-                    case IN_KEY_PRESSURE:
-                        {
-                            double v = d.as_norm();
-                            if(!detector_.is_started())
-                            {
-                                double velocity;
-                                if(detector_.detect(d, &velocity) && input_->velocity_)
-                                {
-                                    v = velocity;
-                                }
-                            }
+                    double v = buffer[j];
 
-                            if(!down_)
+                    switch(i)
+                    {
+                        case IN_KEY_PRESSURE:
                             {
-                                if(exceeds_threshold(v, input_->threshold_))
+                                if(!detector_.is_started())
                                 {
-                                    unsigned code = input_->get_code();
-                                    key_down(code);
-                                    down_ = true;
-                                    if(input_->hold_)
+                                    double velocity;
+                                    if(detector_.detect(d, &velocity) && input_->velocity_)
                                     {
-                                        down_code_ = code;
-                                        held_ = true;
+                                        v = velocity;
                                     }
-                                    else
+                                }
+
+                                if(!down_)
+                                {
+                                    if(exceeds_threshold(v, input_->threshold_))
                                     {
-                                        key_up(code);
+                                        unsigned code = input_->get_code();
+                                        key_down(code);
+                                        down_ = true;
+                                        if(input_->hold_)
+                                        {
+                                            down_code_ = code;
+                                            held_ = true;
+                                        }
+                                        else
+                                        {
+                                            key_up(code);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if(!exceeds_threshold(v, input_->threshold_))
+                                    {
+                                        release_key();
                                     }
                                 }
                             }
-                            else
-                            {
-                                if(!exceeds_threshold(v, input_->threshold_))
-                                {
-                                    release_key();
-                                }
-                            }
-                        }
-                        break;
+                            break;
+                    }
                 }
             }
 
