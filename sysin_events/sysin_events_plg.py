@@ -138,7 +138,7 @@ class KeyPresses(collection.Collection):
         yield async.Coroutine.success()
         
 class Agent(agent.Agent):
-    def __init__(self, address, ordinal):
+    def __init__(self,address,ordinal):
         agent.Agent.__init__(self, signature=version, names='system input events', ordinal=ordinal)
 
         self.domain = piw.clockdomain_ctl()
@@ -233,7 +233,7 @@ class Agent(agent.Agent):
         v = action.abstract_wordlist(val)[0]
         v_val = int(v)
         if v_val < 0:
-            return errors.invalid_thing(to, 'press')
+            return errors.invalid_thing(val, 'press')
         return piw.trigger(self.sysin_events.press_key(),piw.makelong_nb(v_val,0)),None
 
     def __press_character(self,ctx,subj,dummy,val):
@@ -244,8 +244,10 @@ class Agent(agent.Agent):
     def __move_mouse(self,ctx,subj,dummy,v1,v2):
         x = int(action.abstract_string(v1))
         y = int(action.abstract_string(v2))
-        if x < 0 or y < 0:
-            return errors.invalid_thing(to, 'move')
+        if x < 0:
+            return errors.invalid_thing(v1, 'move')
+        if y < 0:
+            return errors.invalid_thing(v2, 'move')
         v = piw.tuplenull_nb(0)
         v = piw.tupleadd_nb(v, piw.makelong_nb(x,0))
         v = piw.tupleadd_nb(v, piw.makelong_nb(y,0))

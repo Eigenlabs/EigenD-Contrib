@@ -38,6 +38,10 @@ namespace
         void set_color(float, float, float);
         void set_color_raw(float, float, float);
         void refresh_color();
+        
+        void show_red(float, unsigned);
+        void show_green(float, unsigned);
+        void show_blue(float, unsigned);
 
         piw::cfilterfunc_t *cfilterctl_create(const piw::data_t &);
         unsigned long long cfilterctl_thru() { return 0; }
@@ -47,9 +51,18 @@ namespace
         blink::blink_t::impl_t *root_;
         unsigned id_;
         hid_device *dev_;
+
         float last_red_;
         float last_green_;
         float last_blue_;
+        
+        float scheduled_red_;
+        float scheduled_green_;
+        float scheduled_blue_;
+        
+        unsigned long long last_timer_red_;
+        unsigned long long last_timer_green_;
+        unsigned long long last_timer_blue_;
     };
     
     struct func_t: piw::cfilterfunc_t
@@ -104,6 +117,22 @@ namespace
                 color_changed = true;
                 blue = d.as_renorm(0,1,0);
             }
+            
+            if(blink_->last_timer_red_ > to)
+            {
+                color_changed = true;
+                red = blink_->scheduled_red_;
+            }
+            if(blink_->last_timer_green_ > to)
+            {
+                color_changed = true;
+                green = blink_->scheduled_green_;
+            }
+            if(blink_->last_timer_blue_ > to)
+            {
+                color_changed = true;
+                blue = blink_->scheduled_blue_;
+            }
 
             if(color_changed)
             {
@@ -121,6 +150,8 @@ struct blink::blink_t::impl_t: piw::thing_t
     impl_t(piw::clockdomain_ctl_t *);
     ~impl_t();
     piw::cookie_t create_blink(unsigned);
+    void show_colour_data(const piw::data_nb_t &d);
+    piw::change_nb_t show_colour();
     
     void thing_timer_slow();
 
@@ -131,10 +162,6 @@ struct blink::blink_t::impl_t: piw::thing_t
     int count_;
 };
 
-namespace
-{
-}
-
 
 /**
  * blink1_t
@@ -142,7 +169,9 @@ namespace
 
 blink1_t::blink1_t(blink::blink_t::impl_t *root, unsigned id, piw::clockdomain_ctl_t *domain):
     cfilter_t(this, piw::cookie_t(0), domain), root_(root), id_(id), dev_(0),
-    last_red_(-1.f), last_green_(-1.f), last_blue_(-1.f)
+    last_red_(-1.f), last_green_(-1.f), last_blue_(-1.f),
+    scheduled_red_(-1.f), scheduled_green_(-1.f), scheduled_blue_(-1.f),
+    last_timer_red_(0), last_timer_green_(0), last_timer_blue_(0)
 {
     refresh_dev();
 }
@@ -190,10 +219,13 @@ void blink1_t::refresh_color()
 
 void blink1_t::set_color(float red, float green, float blue)
 {
-    if(red<0.f || red>1.f || green<0.f || green>1.f || blue<0.f || blue>1.f)
-    {
-        return;
-    }
+    if(red<0.f) red = 0.f;
+    if(red>1.f) red = 1.f;
+    if(green<0.f) green = 0.f;
+    if(green>1.f) green = 1.f;
+    if(blue<0.f) blue = 0.f;
+    if(blue>1.f) blue = 1.f;
+    
     if(red==last_red_ && green==last_green_ && blue==last_blue_)
     {
         return;
@@ -212,6 +244,24 @@ void blink1_t::set_color_raw(float red, float green, float blue)
     {
         blink1_setRGB(dev_, red*255, green*255, blue*255);
     }
+}
+
+void blink1_t::show_red(float value, unsigned length)
+{
+    scheduled_red_ = value;
+    last_timer_red_ = piw::tsd_time() + length;
+}
+
+void blink1_t::show_green(float value, unsigned length)
+{
+    scheduled_green_ = value;
+    last_timer_green_ = piw::tsd_time() + length;
+}
+
+void blink1_t::show_blue(float value, unsigned length)
+{
+    scheduled_blue_ = value;
+    last_timer_blue_ = piw::tsd_time() + length;
 }
 
 
@@ -241,6 +291,52 @@ piw::cookie_t blink::blink_t::impl_t::create_blink(unsigned index)
     blink1_t *instance = new blink1_t(this, index-1, domain_);
     blinks_[index-1] = pic::ref(instance);
     return instance->cookie();
+}
+
+void blink::blink_t::impl_t::show_colour_data(const piw::data_nb_t &d)
+{
+    if(!d.is_tuple() || d.as_tuplelen() != 5)
+    {
+        return;
+    }
+    piw::data_nb_t index = d.as_tuple_value(0);
+    piw::data_nb_t red = d.as_tuple_value(1);
+    piw::data_nb_t green = d.as_tuple_value(2);
+    piw::data_nb_t blue = d.as_tuple_value(3);
+    piw::data_nb_t length = d.as_tuple_value(4);
+    if(!index.is_long() ||
+       (!red.is_null() && !red.is_float()) || 
+       (!green.is_null() && !green.is_float()) ||
+       (!blue.is_null() && !blue.is_float()) ||
+       !length.is_long())
+    {
+        return;
+    }
+    
+    long i = index.as_long()-1;
+    long l = length.as_long();
+    if(i < 0 || i >= blink1_max_devices || l <= 0 || !blinks_[i].isvalid())
+    {
+        return;
+    }
+    
+    if(!red.is_null())
+    {
+        blinks_[i]->show_red(red.as_float(), l);
+    }
+    if(!green.is_null())
+    {
+        blinks_[i]->show_green(green.as_float(), l);
+    }
+    if(!blue.is_null())
+    {
+        blinks_[i]->show_blue(blue.as_float(), l);
+    }
+}
+
+piw::change_nb_t blink::blink_t::impl_t::show_colour()
+{
+    return piw::change_nb_t::method(this, &blink::blink_t::impl_t::show_colour_data);
 }
 
 void blink::blink_t::impl_t::thing_timer_slow()
@@ -277,4 +373,9 @@ blink::blink_t::~blink_t()
 piw::cookie_t blink::blink_t::create_blink(unsigned index)
 {
     return impl_->create_blink(index);
+}
+
+piw::change_nb_t blink::blink_t::show_colour()
+{
+    return impl_->show_colour();
 }

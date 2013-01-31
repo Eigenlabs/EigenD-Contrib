@@ -2,10 +2,12 @@
 #include "blink.h"
 >>>
 
-from piw[piw/piw.pip] import clockdomain_ctl, cookie
+from piw[piw/piw.pip] import clockdomain_ctl, cookie, change_nb
 
 class blink[blink::blink_t]
 {
     blink(clockdomain_ctl *)
     cookie create_blink(unsigned)
+    
+    change_nb show_colour()
 }

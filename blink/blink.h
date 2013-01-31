@@ -33,6 +33,8 @@ namespace blink
 
             piw::cookie_t create_blink(unsigned index);
 
+            piw::change_nb_t show_colour();
+
             class impl_t;
         private:
             impl_t *impl_;
