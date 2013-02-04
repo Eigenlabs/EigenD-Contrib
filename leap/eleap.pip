@@ -1,0 +1,11 @@
+<<<
+#include "eleap.h"
+>>>
+
+from piw[piw/piw.pip] import clockdomain_ctl, cookie
+
+class eleap[eleap::eleap_t]
+{
+    eleap(clockdomain_ctl *)
+    void create_hand(unsigned, const cookie &)
+}

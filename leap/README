@@ -1,0 +1,5 @@
+For this agent to compile, you need to download the Leap SDK from the
+Leap Motion website: https://developer.leapmotion.com
+
+Unzip the archive and ensure that the files are all in a Leap_SDK directory in
+this directory. At this point you should be able to compile the agent.
