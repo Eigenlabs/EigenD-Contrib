@@ -117,7 +117,6 @@ namespace
                 color_changed = true;
                 blue = d.as_norm();
             }
-            pic::logmsg() << red << ", " << green << ", " << blue;
             
             if(blink_->last_timer_red_ > to)
             {
