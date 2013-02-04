@@ -105,18 +105,19 @@ namespace
             if(env->cfilterenv_latest(1,d,to))
             {
                 color_changed = true;
-                red = d.as_renorm(0,1,0);
+                red = d.as_norm();
             }
             if(env->cfilterenv_latest(2,d,to))
             {
                 color_changed = true;
-                green = d.as_renorm(0,1,0);
+                green = d.as_norm();
             }
             if(env->cfilterenv_latest(3,d,to))
             {
                 color_changed = true;
-                blue = d.as_renorm(0,1,0);
+                blue = d.as_norm();
             }
+            pic::logmsg() << red << ", " << green << ", " << blue;
             
             if(blink_->last_timer_red_ > to)
             {
