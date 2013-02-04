@@ -105,17 +105,17 @@ namespace
             if(env->cfilterenv_latest(1,d,to))
             {
                 color_changed = true;
-                red = d.as_norm();
+                red = d.as_renorm(0.f, 1.f, 0.f);
             }
             if(env->cfilterenv_latest(2,d,to))
             {
                 color_changed = true;
-                green = d.as_norm();
+                green = d.as_renorm(0.f, 1.f, 0.f);
             }
             if(env->cfilterenv_latest(3,d,to))
             {
                 color_changed = true;
-                blue = d.as_norm();
+                blue = d.as_renorm(0.f, 1.f, 0.f);
             }
             
             if(blink_->last_timer_red_ > to)

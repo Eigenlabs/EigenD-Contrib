@@ -34,9 +34,9 @@ class Blink(atom.Atom):
 
         self.__input = bundles.VectorInput(self.__inputcookie, self.__agent.domain, signals=(1,2,3))
 
-        self[1] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='red', policy=self.__input.local_policy(1,False))
-        self[2] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='green', policy=self.__input.local_policy(2,False))
-        self[3] = atom.Atom(domain=domain.BoundedFloat(0,1), init=1.0, names='blue', policy=self.__input.local_policy(3,False))
+        self[1] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.0, names='red', policy=self.__input.local_policy(1,False))
+        self[2] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.0, names='green', policy=self.__input.local_policy(2,False))
+        self[3] = atom.Atom(domain=domain.BoundedFloat(0,1), init=0.0, names='blue', policy=self.__input.local_policy(3,False))
 
         self.add_verb2(1,'show([],~a,role(None,[instance(~self)]),role(as,[mass([red])]),role(for,[mass([second])]))',create_action=self.__show_red)
         self.add_verb2(2,'show([],~a,role(None,[instance(~self)]),role(as,[mass([green])]),role(for,[mass([second])]))',create_action=self.__show_green)

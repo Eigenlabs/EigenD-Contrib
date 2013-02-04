@@ -45,10 +45,11 @@ namespace
 
         void start();
         void stop();
-        void add_palm_position(const piw::data_nb_t &, const piw::data_nb_t &, const piw::data_nb_t &);
+        void add_palm_position(float, float, float);
 
         piw::xevent_data_buffer_t buffer_;
         unsigned id_;
+        unsigned long long time_;
     };
 
     struct hand_t: piw::root_ctl_t, virtual public pic::counted_t
@@ -91,7 +92,7 @@ struct eleap::eleap_t::impl_t: public Leap::Listener, piw::thing_t
  * palm_wire_t
  */
 
-palm_wire_t::palm_wire_t(unsigned id): piw::event_data_source_real_t(piw::pathone(id,0)), id_(id)
+palm_wire_t::palm_wire_t(unsigned id): piw::event_data_source_real_t(piw::pathone(id,0)), id_(id), time_(0)
 {
     buffer_ = piw::xevent_data_buffer_t();
     buffer_.set_signal(1, piw::tsd_dataqueue(PIW_DATAQUEUE_SIZE_NORM));
@@ -108,27 +109,23 @@ palm_wire_t::~palm_wire_t()
 
 void palm_wire_t::start()
 {
-    unsigned long long t = piw::tsd_time();
-    buffer_.add_value(1, piw::makefloat_bounded_nb(1.0,-1.0,0.0,0.0,t));
-    buffer_.add_value(2, piw::makefloat_bounded_nb(1.0,-1.0,0.0,0.0,t));
-    buffer_.add_value(3, piw::makefloat_bounded_nb(1.0,-1.0,0.0,0.0,t));
-    source_start(0,piw::pathone_nb(id_,t),buffer_);
+    add_palm_position(0.f, 0.f, 0.f);
+    source_start(0,piw::pathone_nb(id_,time_),buffer_);
 }
 
 void palm_wire_t::stop()
 {
-    unsigned long long t = piw::tsd_time();
-    buffer_.add_value(1, piw::makefloat_bounded_nb(1.0,-1.0,0.0,0.0,t));
-    buffer_.add_value(2, piw::makefloat_bounded_nb(1.0,-1.0,0.0,0.0,t));
-    buffer_.add_value(3, piw::makefloat_bounded_nb(1.0,-1.0,0.0,0.0,t));
-    source_end(t+1);
+    add_palm_position(0.f, 0.f, 0.f);
+    time_++;
+    source_end(time_);
 }
 
-void palm_wire_t::add_palm_position(const piw::data_nb_t &x, const piw::data_nb_t &y, const piw::data_nb_t &z)
+void palm_wire_t::add_palm_position(float x, float y, float z)
 {
-    buffer_.add_value(1, x);
-    buffer_.add_value(2, y);
-    buffer_.add_value(3, z);
+    time_ = std::max(time_+1, piw::tsd_time());
+    buffer_.add_value(1, piw::makefloat_bounded_nb(1.0, -1.0, 0.0, x, time_));
+    buffer_.add_value(2, piw::makefloat_bounded_nb(1.0, 0.0, 0.0, y, time_));
+    buffer_.add_value(3, piw::makefloat_bounded_nb(1.0, -1.0, 0.0, z, time_));
 }
 
 
@@ -169,7 +166,6 @@ void eleap::eleap_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &d)
     int32_t arg1 = (dt&0xffffffff)>>8;
     //unsigned char arg2 = (t&0xff0000)>>16;
     
-    unsigned long long t = piw::tsd_time();
     switch(type)
     {
         case DATA_KNOWN_HANDS:
@@ -261,10 +257,7 @@ void eleap::eleap_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &d)
                 
                 if(h)
                 {
-                    piw::data_nb_t x = piw::makefloat_bounded_nb(1.0, -1.0, 0.0, d.as_array_member(0), t);
-                    piw::data_nb_t y = piw::makefloat_bounded_nb(1.0, -1.0, 0.0, d.as_array_member(1), t);
-                    piw::data_nb_t z = piw::makefloat_bounded_nb(1.0, -1.0, 0.0, d.as_array_member(2), t);
-                    h->palm_wire_.ptr()->add_palm_position(x, y, z);
+                    h->palm_wire_.ptr()->add_palm_position(d.as_array_member(0), d.as_array_member(1), d.as_array_member(2));
                 }
             }
             break;
