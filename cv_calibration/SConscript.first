@@ -19,18 +19,20 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
+env = master_env.Clone()
+
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
 
 plg_files = Split("""
     cv_calibration.cpp
 """)
 
-master_env.PiPythonPackage(package='cv_calibration', per_agent='plg_cv_calibration')
-master_env.PiAgent('control_voltage_calibration', 'plg_cv_calibration', 'cv_calibration_plg',cversion='1.0.0')
+env.PiPythonPackage(package='cv_calibration', per_agent='plg_cv_calibration')
+env.PiAgent('control_voltage_calibration', 'plg_cv_calibration', 'cv_calibration_plg',cversion='1.0.0')
 
-master_env.PiPipBinding('cv_calibration_native', 'cv_calibration.pip',
+env.PiPipBinding('cv_calibration_native', 'cv_calibration.pip',
 	sources=plg_files, libraries=Split('pic piw pia'), package='cv_calibration',
 	per_agent="plg_cv_calibration")
 
-master_env.PiPackageDescription('cv_calibration', desc='Control Voltage Calibration', groups=('contrib',))
-master_env.PiPackageCollection('cv_calibration', groups=('contrib',))
+env.PiPackageDescription('cv_calibration', desc='Control Voltage Calibration', groups=('contrib',))
+env.PiPackageCollection('cv_calibration', groups=('contrib',))

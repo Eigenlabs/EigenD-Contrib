@@ -19,28 +19,30 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
+env = master_env.Clone()
+
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
 
 plg_files = Split("""
     blink.cpp blink1-lib.cpp
 """)
 
-master_env.PiPythonPackage(package='blink', per_agent='plg_blink')
-master_env.PiAgent('blink_manager', 'plg_blink', 'blink_plg', cversion='1.1.0')
+env.PiPythonPackage(package='blink', per_agent='plg_blink')
+env.PiAgent('blink_manager', 'plg_blink', 'blink_plg', cversion='1.1.0')
 
-master_env.Append(CPPPATH=['hidapi/hidapi'])
+env.Append(CPPPATH=['hidapi/hidapi'])
 
-if master_env['IS_MACOSX']:
+if env['IS_MACOSX']:
     plg_files.append('hidapi/mac/hid.c')
-    master_env.Append(LINKFLAGS=Split('-framework CoreFoundation -framework IOKit'))
+    env.Append(LINKFLAGS=Split('-framework CoreFoundation -framework IOKit'))
 
-if master_env['IS_WINDOWS']:
+if env['IS_WINDOWS']:
     plg_files.append('hidapi/windows/hid.c')
-    master_env.Append(LINKFLAGS=Split('setupapi.lib user32.lib /nodefaultlib:libcmt.lib /force:multiple'))
+    env.Append(LINKFLAGS=Split('setupapi.lib user32.lib /nodefaultlib:libcmt.lib /force:multiple'))
 
-master_env.PiPipBinding('blink_native', 'blink.pip',
+env.PiPipBinding('blink_native', 'blink.pip',
     sources=plg_files, libraries=Split('pic piw pia'), package='blink',
     per_agent="plg_blink")
 
-master_env.PiPackageDescription('blink', desc='Blink', groups=('contrib',))
-master_env.PiPackageCollection('blink', groups=('contrib',))
+env.PiPackageDescription('blink', desc='Blink', groups=('contrib',))
+env.PiPackageCollection('blink', groups=('contrib',))

@@ -19,7 +19,9 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='EigenDevCon')
+env = master_env.Clone()
+
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='EigenDevCon')
 
 plg_files = Split("""
     synth_noise.cpp
@@ -27,14 +29,14 @@ plg_files = Split("""
     Filter.cpp
     Stk.cpp""")
 
-master_env.PiPythonPackage(package='synth_noise', per_agent='plg_synth_noise')
-master_env.PiAgent('noise_oscillator','plg_synth_noise','noise_oscillator_plg',
+env.PiPythonPackage(package='synth_noise', per_agent='plg_synth_noise')
+env.PiAgent('noise_oscillator','plg_synth_noise','noise_oscillator_plg',
     cversion='1.0.0')
 
-master_env.PiPipBinding('synth_noise', 'synth_noise.pip',
+env.PiPipBinding('synth_noise', 'synth_noise.pip',
 	sources=plg_files, libraries=Split('pic piw pia'), package='synth_noise',
 	per_agent="plg_synth_noise")
 
-master_env.PiPackageDescription('synth_noise', desc='Noise Oscillator', 
+env.PiPackageDescription('synth_noise', desc='Noise Oscillator', 
     groups=('contrib',))
-master_env.PiPackageCollection('synth_noise', groups=('contrib',))
+env.PiPackageCollection('synth_noise', groups=('contrib',))

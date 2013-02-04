@@ -19,24 +19,34 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
+env = master_env.Clone()
+
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
 
 plg_files = Split("""
     audiocubes.cpp
 """)
 
-master_env.PiPythonPackage(package='audiocubes', per_agent='plg_audiocubes')
-master_env.PiAgent('audiocubes', 'plg_audiocubes', 'audiocubes_plg', cversion='1.0.0', lexicon='lexicon.txt')
+env.PiPythonPackage(package='audiocubes', per_agent='plg_audiocubes')
+env.PiAgent('audiocubes', 'plg_audiocubes', 'audiocubes_plg', cversion='1.0.0', lexicon='lexicon.txt')
 
-if master_env['IS_MACOSX']:
-	master_env.Append(LINKFLAGS=Split('-Laudiocubes/libCube2/bin/osx -lcube2 -framework CoreFoundation -framework IOKit'))
+if env['IS_MACOSX']:
+    env.Append(LINKFLAGS=Split('-lcube2 -framework CoreFoundation -framework IOKit'))
+    if 'IS_COLLECTIVE_BUILD' in env:
+        env.Append(LINKFLAGS=Split('-Laudiocubes/libCube2/bin/osx'))
+    else:
+        env.Append(LINKFLAGS=Split('-LlibCube2/bin/osx'))
 
-if master_env['IS_WINDOWS']:
-    master_env.Append(LINKFLAGS=Split('/LIBPATH:audiocubes\\libCube2\\bin\\win libCube2.lib setupapi.lib user32.lib /nodefaultlib:libcmt.lib /force:multiple'))
+if env['IS_WINDOWS']:
+    env.Append(LINKFLAGS=Split('libCube2.lib setupapi.lib user32.lib /nodefaultlib:libcmt.lib /force:multiple'))
+    if 'IS_COLLECTIVE_BUILD' in env:
+        env.Append(LINKFLAGS=Split('/LIBPATH:audiocubes\\libCube2\\bin\\win'))
+    else:
+        env.Append(LINKFLAGS=Split('/LIBPATH:libCube2\\bin\\win'))
 
-master_env.PiPipBinding('audiocubes_native', 'audiocubes.pip',
+env.PiPipBinding('audiocubes_native', 'audiocubes.pip',
 	sources=plg_files, libraries=Split('pic piw pia'), package='audiocubes',
 	per_agent="plg_audiocubes")
 
-master_env.PiPackageDescription('audiocubes', desc='AudioCubes', groups=('contrib',))
-master_env.PiPackageCollection('audiocubes', groups=('contrib',))
+env.PiPackageDescription('audiocubes', desc='AudioCubes', groups=('contrib',))
+env.PiPackageCollection('audiocubes', groups=('contrib',))

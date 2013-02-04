@@ -19,18 +19,20 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='Eigenlabs Examples')
+env = master_env.Clone()
+
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='Eigenlabs Examples')
 
 plg_files = Split("""
     vu_meter.cpp
 """)
 
-master_env.PiPythonPackage(package='vu_meter', per_agent='plg_vu_meter')
-master_env.PiAgent('vu_meter', 'plg_vu_meter', 'vu_meter_plg',cversion='1.0.0')
+env.PiPythonPackage(package='vu_meter', per_agent='plg_vu_meter')
+env.PiAgent('vu_meter', 'plg_vu_meter', 'vu_meter_plg',cversion='1.0.0')
 
-master_env.PiPipBinding('vu_meter_native', 'vu_meter.pip',
+env.PiPipBinding('vu_meter_native', 'vu_meter.pip',
 	sources=plg_files, libraries=Split('pic piw pia'), package='vu_meter',
 	per_agent="plg_vu_meter")
 
-master_env.PiPackageDescription('vu_meter', desc='Vu Meter', groups=('contrib',))
-master_env.PiPackageCollection('vu_meter', groups=('contrib',))
+env.PiPackageDescription('vu_meter', desc='Vu Meter', groups=('contrib',))
+env.PiPackageCollection('vu_meter', groups=('contrib',))

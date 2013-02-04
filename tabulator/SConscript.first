@@ -19,10 +19,12 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
+env = master_env.Clone()
 
-master_env.PiPythonPackage(package='tabulator', per_agent='plg_tabulator')
-master_env.PiAgent('tabulator', 'plg_tabulator', 'tabulator_plg',cversion='1.0.0')
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
 
-master_env.PiPackageDescription('tabulator', desc='Tabulator', groups=('contrib',))
-master_env.PiPackageCollection('tabulator', groups=('contrib',))
+env.PiPythonPackage(package='tabulator', per_agent='plg_tabulator')
+env.PiAgent('tabulator', 'plg_tabulator', 'tabulator_plg',cversion='1.0.0')
+
+env.PiPackageDescription('tabulator', desc='Tabulator', groups=('contrib',))
+env.PiPackageCollection('tabulator', groups=('contrib',))

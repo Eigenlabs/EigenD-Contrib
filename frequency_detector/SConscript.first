@@ -19,18 +19,20 @@
 
 Import('master_env')
 
-master_env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
+env = master_env.Clone()
+
+env.PiExternalRelease('2.0.66-stable', '2.0-stable', organisation='G.Bevin')
 
 plg_files = Split("""
     frequency_detector.cpp
 """)
 
-master_env.PiPythonPackage(package='frequency_detector', per_agent='plg_frequency_detector')
-master_env.PiAgent('frequency_detector', 'plg_frequency_detector', 'frequency_detector_plg',cversion='1.0.0')
+env.PiPythonPackage(package='frequency_detector', per_agent='plg_frequency_detector')
+env.PiAgent('frequency_detector', 'plg_frequency_detector', 'frequency_detector_plg',cversion='1.0.0')
 
-master_env.PiPipBinding('frequency_detector_native', 'frequency_detector.pip',
+env.PiPipBinding('frequency_detector_native', 'frequency_detector.pip',
 	sources=plg_files, libraries=Split('pic piw pia'), package='frequency_detector',
 	per_agent="plg_frequency_detector")
 
-master_env.PiPackageDescription('frequency_detector', desc='Frequency Detector', groups=('contrib',))
-master_env.PiPackageCollection('frequency_detector', groups=('contrib',))
+env.PiPackageDescription('frequency_detector', desc='Frequency Detector', groups=('contrib',))
+env.PiPackageCollection('frequency_detector', groups=('contrib',))
