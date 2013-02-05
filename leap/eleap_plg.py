@@ -35,7 +35,8 @@ class Hand(atom.Atom):
         self[3] = bundles.Output(3, False, names='palm z output')
 
         self.__output = bundles.Splitter(self.__agent.domain, self[1], self[2], self[3])
-        self.__agent.eleap.create_hand(self.__index, self.__output.cookie())
+        self.__palmpoly = piw.polyctl(1, self.__output.cookie(), False, 1)
+        self.__agent.eleap.create_hand(self.__index, self.__palmpoly.cookie())
 
 class Agent(agent.Agent):
     def __init__(self, address, ordinal):

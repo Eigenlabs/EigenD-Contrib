@@ -50,6 +50,9 @@ namespace
         piw::xevent_data_buffer_t buffer_;
         unsigned id_;
         unsigned long long time_;
+        float cur_x_;
+        float cur_y_;
+        float cur_z_;
     };
 
     struct hand_t: piw::root_ctl_t, virtual public pic::counted_t
@@ -92,7 +95,7 @@ struct eleap::eleap_t::impl_t: public Leap::Listener, piw::thing_t
  * palm_wire_t
  */
 
-palm_wire_t::palm_wire_t(unsigned id): piw::event_data_source_real_t(piw::pathone(id,0)), id_(id), time_(0)
+palm_wire_t::palm_wire_t(unsigned id): piw::event_data_source_real_t(piw::pathone(id,0)), id_(id), time_(0), cur_x_(0), cur_y_(0), cur_z_(0)
 {
     buffer_ = piw::xevent_data_buffer_t();
     buffer_.set_signal(1, piw::tsd_dataqueue(PIW_DATAQUEUE_SIZE_NORM));
@@ -123,9 +126,12 @@ void palm_wire_t::stop()
 void palm_wire_t::add_palm_position(float x, float y, float z)
 {
     time_ = std::max(time_+1, piw::tsd_time());
-    buffer_.add_value(1, piw::makefloat_bounded_nb(1.0, -1.0, 0.0, x, time_));
-    buffer_.add_value(2, piw::makefloat_bounded_nb(1.0, 0.0, 0.0, y, time_));
-    buffer_.add_value(3, piw::makefloat_bounded_nb(1.0, -1.0, 0.0, z, time_));
+    if(x != cur_x_) buffer_.add_value(1, piw::makefloat_bounded_nb(1.0, -1.0, 0.0, x, time_));
+    if(y != cur_y_) buffer_.add_value(2, piw::makefloat_bounded_nb(1.0, 0.0, 0.0, y, time_));
+    if(z != cur_z_) buffer_.add_value(3, piw::makefloat_bounded_nb(1.0, -1.0, 0.0, z, time_));
+    cur_x_ = x;
+    cur_y_ = y;
+    cur_z_ = z;
 }
 
 
