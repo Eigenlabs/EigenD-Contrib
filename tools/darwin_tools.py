@@ -112,11 +112,9 @@ class PiDarwinEnvironment(unix_tools.PiUnixEnvironment):
         os_major=uname()[2].split('.')[0]
         self.Append(LIBS=Split('dl m pthread'))
         self.Append(CCFLAGS=Split('-arch i386 -DDEBUG_DATA_ATOMICITY_DISABLED -DPI_PREFIX=\\"$PI_PREFIX\\" -mmacosx-version-min=10.6'))
-        self.Append(LINKFLAGS=Split('-arch i386 -framework Accelerate -Wl,-rpath,@executable_path/ -no_compact_linkedit -mmacosx-version-min=10.6'))
-        self.Replace(CXX='g++-4.2')
-        self.Replace(CC='gcc-4.2')
+        self.Append(LINKFLAGS=Split('-arch i386 -framework Accelerate -Wl,-rpath,@executable_path/ -mmacosx-version-min=10.6'))
 
-        self.Append(CCFLAGS=Split('-ggdb -Werror -Wall -Wno-deprecated-declarations -Wno-format -O4 -fmessage-length=0 -falign-loops=16 -msse3'))
+        self.Append(CCFLAGS=Split('-ggdb -Werror -Wall -Wno-deprecated-declarations -Wno-format -Wno-unused-function -Wno-unused-private-field -Wno-c++11-extensions -Os -fmessage-length=0 -msse3'))
 
         self.Replace(PI_DLLENVNAME='DYLD_LIBRARY_PATH')
         self.Replace(IS_MACOSX=os_major)
@@ -269,6 +267,8 @@ class PiDarwinEnvironment(unix_tools.PiUnixEnvironment):
             f.write("    <key>CFBundleVersion</key><string>%s</string>\n" % env.subst('$PI_RELEASE') )
             f.write("    <key>LSBackgroundOnly</key>%s\n" % bgs)
             f.write("    <key>LSUIElement</key>%s\n" % di_active )
+            if env.subst('$PI_HIRES'):
+                f.write("    <key>NSHighResolutionCapable</key><true/>\n")
             f.write("</dict>\n")
             f.write("</plist>\n")
             f.close()

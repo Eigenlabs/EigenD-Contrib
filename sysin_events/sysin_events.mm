@@ -432,10 +432,10 @@ namespace sysin_events
                 unsigned y = d.as_tuple_value(1).as_long();
                 
                 CGPoint position = CGPointMake(x,y);
-                mousevent(kCGEventMouseMoved, position, NULL);
+                mousevent(kCGEventMouseMoved, position, nil);
                 
-                if(mouseinput_.mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, NULL);
-                if(mouseinput_.mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, NULL);
+                if(mouseinput_.mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, nil);
+                if(mouseinput_.mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, nil);
             }
         }
 
@@ -650,10 +650,10 @@ namespace
 
             if(moved)
             {
-                mousevent(kCGEventMouseMoved, position, NULL);
+                mousevent(kCGEventMouseMoved, position, nil);
                 
-                if(input_->mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, NULL);
-                if(input_->mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, NULL);
+                if(input_->mouse_1_down_) mousevent(kCGEventLeftMouseDragged, position, nil);
+                if(input_->mouse_2_down_) mousevent(kCGEventRightMouseDragged, position, nil);
             }
 
             return true;

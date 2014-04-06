@@ -391,7 +391,7 @@ void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &
     if(d.is_long())
     {
         unsigned cube = d.as_long();
-        if(cube>= 0 && cube<CUBES && cubes_[cube].isvalid())
+        if(cube<CUBES && cubes_[cube].isvalid())
         {
             for(int i=0; i<FACES; i++)
             {
@@ -406,8 +406,8 @@ void audiocubes::audiocubes_t::impl_t::thing_dequeue_fast(const piw::data_nb_t &
         unsigned long long t = d.time();
         unsigned cube = (t&0xf0) >> 4;
         unsigned face = (t&0xf);
-        if(cube>= 0 && cube<CUBES && cubes_[cube].isvalid() &&
-           face>= 0 && face<FACES)
+        if(cube<CUBES && cubes_[cube].isvalid() &&
+           face<FACES)
         {
             cubes_[cube].ptr()->wires_[face].ptr()->add_value(d.restamp(piw::tsd_time()));
         }
